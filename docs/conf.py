@@ -44,7 +44,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "invenio-moodle"
-copyright = "2022, Graz University of Technology"
+project_copyright = "2022, Graz University of Technology"
 author = "Graz University of Technology"
 
 # The version info for the project you're documenting, acts as replacement for
@@ -61,7 +61,7 @@ release = __version__
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:

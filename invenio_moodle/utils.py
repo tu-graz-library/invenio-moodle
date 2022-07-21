@@ -21,6 +21,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import requests
+from flask import current_app
 from invenio_access.permissions import system_identity
 from invenio_pidstore.errors import PIDDoesNotExistError
 from invenio_pidstore.models import PersistentIdentifier
@@ -666,3 +667,13 @@ def insert_moodle_into_db(
                 publish(id_=task_log.pid, uow=uow)
 
         uow.commit()
+
+
+def fetch_moodle() -> None:
+    """Fetch data from MOODLE_FETCH_URL and insert it into the database."""
+    response = requests.get(current_app.config["MOODLE_FETCH_URL"])
+    response.raise_for_status()
+
+    moodle_data = response.json()
+
+    insert_moodle_into_db(moodle_data)

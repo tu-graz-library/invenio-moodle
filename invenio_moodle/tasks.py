@@ -9,24 +9,18 @@
 
 import traceback
 
-import requests
 from celery import shared_task
 from flask import current_app
 from flask_mail import Message
 
-from .utils import insert_moodle_into_db
+from .utils import fetch_moodle
 
 
 @shared_task(ignore_result=True)
-def fetch_moodle():
+def try_fetch_moodle_except_mail():
     """Fetch data from moodle and enter it into database."""
     try:
-        response = requests.get(current_app.config["MOODLE_FETCH_URL"])
-        response.raise_for_status()
-
-        moodle_data = response.json()
-
-        insert_moodle_into_db(moodle_data)
+        fetch_moodle()
 
     except Exception:  # pylint: disable=broad-except
         config = current_app.config

@@ -20,7 +20,8 @@ from .utils import fetch_moodle
 def try_fetch_moodle_except_mail():
     """Fetch data from moodle and enter it into database."""
     try:
-        fetch_moodle()
+        moodle_fetch_url = current_app.config["MOODLE_FETCH_URL"]
+        fetch_moodle(moodle_fetch_url)
 
     except Exception:  # pylint: disable=broad-except
         config = current_app.config

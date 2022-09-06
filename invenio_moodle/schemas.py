@@ -51,6 +51,7 @@ class CourseSchema(Schema):
             "Übung (UE)",
             "Seminar-Projekt (SP)",
             "Vorlesung und Übung (VU)",
+            "Orientierungslehrveranstaltung (OL)",
         ],
         required=True,
     )
@@ -76,6 +77,7 @@ class FileSchema(Schema):
     """Moodle file schema."""
 
     abstract = String(required=True)
+    contenthash = String(required=True)
     classification = List(Nested(ClassificationSchema), required=True)
     context = String(required=True)
     courses = List(Nested(CourseSchema), required=True)
@@ -106,6 +108,7 @@ class MoodleSchema(Schema):
     Data coming from moodle should be in this format.
     """
 
+    applicationprofile = String(required=True)
     moodlecourses = List(Nested(MoodleCourseSchema), required=True)
 
     @validates_schema

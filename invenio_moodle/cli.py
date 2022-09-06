@@ -8,6 +8,8 @@
 """Command-line interface for `invenio_moodle`."""
 
 import click
+from click_params import URL
+from flask import current_app
 from flask.cli import with_appcontext
 
 from .utils import fetch_moodle
@@ -20,6 +22,10 @@ def moodle():
 
 @moodle.command()
 @with_appcontext
-def fetch():
+@click.option("--moodle-fetch-url", type=URL)
+def fetch(moodle_fetch_url: str = None):
     """Fetch data from MOODLE_FETCH_URL and insert it into the database."""
-    fetch_moodle()
+    if not moodle_fetch_url:
+        moodle_fetch_url = current_app.config["MOODLE_FETCH_URL"]
+
+    fetch_moodle(moodle_fetch_url)

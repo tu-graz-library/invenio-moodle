@@ -7,6 +7,8 @@
 
 """Provide functions to store files into the database."""
 
+from __future__ import annotations
+
 import copy
 import hashlib
 import re

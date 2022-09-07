@@ -7,6 +7,9 @@
 
 """Types."""
 
+from __future__ import annotations
+
+import typing
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
@@ -125,7 +128,7 @@ class Link:
     value: str
 
 
-TaskLogs = dict[Key, TaskLog]
-FileCache = dict[str, FileCacheInfo]
-Links = set[Link]
-FilePaths = dict[str, Path]
+TaskLogs = typing.Dict[Key, TaskLog]
+FileCache = typing.Dict[str, FileCacheInfo]
+Links = typing.Set[Link]
+FilePaths = typing.Dict[str, Path]

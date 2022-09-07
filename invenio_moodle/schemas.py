@@ -77,8 +77,8 @@ class FileSchema(Schema):
     """Moodle file schema."""
 
     abstract = String(required=True)
-    contenthash = String(required=True)
     classification = List(Nested(ClassificationSchema), required=True)
+    contenthash = String(required=True)
     context = String(required=True)
     courses = List(Nested(CourseSchema), required=True)
     filecreationtime = String(required=True)

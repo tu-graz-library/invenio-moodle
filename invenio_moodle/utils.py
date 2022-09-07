@@ -46,7 +46,7 @@ def publish_created_drafts(task_logs: TaskLogs, uow: UnitOfWork = None):
     """Publish created drafts."""
     # uow rolls back all `publish`s if one fails as to prevent an inconsistent database-state
     service = current_records_lom.records_service
-    read_draft = partial(service.read_draft, identity=system_identity)
+    resolve = partial(service.draft_cls.pid.resolve, registered_only=False)
     publish = partial(service.publish, identity=system_identity)
 
     for task_log in task_logs.values():
@@ -54,15 +54,13 @@ def publish_created_drafts(task_logs: TaskLogs, uow: UnitOfWork = None):
         # (drafts are created iff record-updates are needed)
         try:
             # check if a draft exists for task_log.pid
-            read_draft(id_=task_log.pid)
+            resolve(pid_value=task_log.pid)
         except NoResultFound:
             # no draft found: continue
             continue
         else:
             # draft exists: publish
             publish(id_=task_log.pid, uow=uow)
-
-    uow.commit()
 
 
 # pylint: disable-next=too-many-locals

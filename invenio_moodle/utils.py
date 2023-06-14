@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2022 Graz University of Technology.
+# Copyright (C) 2022-2023 Graz University of Technology.
 #
 # invenio-moodle is free software; you can redistribute it and/or modify
 # it under the terms of the MIT License; see LICENSE file for more details.
@@ -9,29 +9,26 @@
 
 from __future__ import annotations
 
-from functools import partial
+from collections.abc import Callable
 from tempfile import TemporaryDirectory
 
-from invenio_access.permissions import system_identity
-from invenio_records_lom.proxies import current_records_lom
 from invenio_records_lom.utils import LOMMetadata
 from invenio_records_resources.services.uow import UnitOfWork, unit_of_work
 from requests import get
 from sqlalchemy.orm.exc import NoResultFound
 
 from .convert import update_course_metadata, update_file_metadata, update_unit_metadata
+from .decorators import edit, publish, resolve, update_draft
 from .files import insert_files_into_db, prepare_files
 from .links import get_links
 from .schemas import MoodleSchema
 from .types import CourseKey, FileKey, FilePaths, TaskLogs, UnitKey
 
 
-def update_drafts(task_logs: TaskLogs):
+@edit
+@update_draft
+def update_drafts(task_logs: TaskLogs, edit: Callable, update_draft: Callable) -> None:
     """Update drafts."""
-    service = current_records_lom.records_service
-    edit = partial(service.edit, identity=system_identity)
-    update_draft = partial(service.update_draft, identity=system_identity)
-
     for task_log in task_logs.values():
         if task_log.previous_json == task_log.json:
             continue
@@ -42,13 +39,15 @@ def update_drafts(task_logs: TaskLogs):
 
 
 @unit_of_work()
-def publish_created_drafts(task_logs: TaskLogs, uow: UnitOfWork = None):
+@resolve
+@publish
+def publish_created_drafts(
+    task_logs: TaskLogs,
+    resolve: Callable,
+    publish: Callable,
+    uow: UnitOfWork = None,
+) -> None:
     """Publish created drafts."""
-    # uow rolls back all `publish`s if one fails as to prevent an inconsistent database-state
-    service = current_records_lom.records_service
-    resolve = partial(service.draft_cls.pid.resolve, registered_only=False)
-    publish = partial(service.publish, identity=system_identity)
-
     for task_log in task_logs.values():
         # only publish if a draft was created
         # (drafts are created iff record-updates are needed)
@@ -63,9 +62,9 @@ def publish_created_drafts(task_logs: TaskLogs, uow: UnitOfWork = None):
             publish(id_=task_log.pid, uow=uow)
 
 
-# pylint: disable-next=too-many-locals
 def insert_moodle_into_db(
-    moodle_data: dict, filepaths_by_url: FilePaths = None
+    moodle_data: dict,
+    filepaths_by_url: FilePaths = None,
 ) -> None:
     """Insert data encoded in `moodle-data` into invenio-database.
 
@@ -108,7 +107,8 @@ def insert_moodle_into_db(
         elif isinstance(key, CourseKey):
             update_course_metadata(task_log)
         else:
-            raise TypeError("Cannot handle key of type {type(key)}.")
+            msg = f"Cannot handle key of type {type(key)}."
+            raise TypeError(msg)
 
     update_drafts(task_logs)
     publish_created_drafts(task_logs)
@@ -116,7 +116,7 @@ def insert_moodle_into_db(
 
 def fetch_moodle(moodle_fetch_url: str) -> None:
     """Fetch data from MOODLE_FETCH_URL and insert it into the database."""
-    response = get(moodle_fetch_url)
+    response = get(moodle_fetch_url, timeout=10)
     response.raise_for_status()
 
     moodle_data = response.json()

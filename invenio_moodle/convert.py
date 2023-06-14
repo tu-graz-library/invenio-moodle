@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2022 Graz University of Technology.
+# Copyright (C) 2022-2023 Graz University of Technology.
 #
 # invenio-moodle is free software; you can redistribute it and/or modify
 # it under the terms of the MIT License; see LICENSE file for more details.
@@ -16,7 +16,11 @@ from .types import FileCache, TaskLog
 
 
 def update_course_metadata(course_tasklog: TaskLog) -> None:
-    """Update `course_tasklog.json` using `course_tasklog.moodle_file_json` and `course_tasklog.moodle_course_json`."""
+    """Update `course_tasklog.json`.
+
+    The update uses `course_tasklog.moodle_file_json` and
+    `course_tasklog.moodle_course_json`.
+    """
     metadata = LOMMetadata(course_tasklog.json or {}, overwritable=True)
     file_json = course_tasklog.moodle_file_json
     course_json = course_tasklog.moodle_course_json
@@ -45,7 +49,11 @@ def update_course_metadata(course_tasklog: TaskLog) -> None:
 
 
 def update_unit_metadata(unit_tasklog: TaskLog) -> None:
-    """Update `unit_tasklog.json` using `unit_tasklog.moodle_file_json` and `unit_tasklog.moodle_course_json`."""
+    """Update `unit_tasklog.json`.
+
+    The update uses `unit_tasklog.moodle_file_json` and
+    `unit_tasklog.moodle_course_json`.
+    """
     metadata = LOMMetadata(unit_tasklog.json or {}, overwritable=True)
     file_json = unit_tasklog.moodle_file_json
     course_json = unit_tasklog.moodle_course_json
@@ -77,8 +85,7 @@ def update_unit_metadata(unit_tasklog: TaskLog) -> None:
 
     # convert lecturers
     for lecturer in course_json["lecturer"].split(","):
-        lecturer = lecturer.strip()
-        metadata.append_contribute(lecturer, role="Author")
+        metadata.append_contribute(lecturer.strip(), role="Author")
 
     # convert organisation
     organisation = course_json["organisation"]
@@ -165,7 +172,8 @@ def update_file_metadata(file_tasklog: TaskLog, file_cache: FileCache) -> None:
     ]
     # reorder to ['1234', '123', '2345', '234', '2']
     oefos_ids.sort(key=lambda id_: id_.ljust(6, chr(255)))
-    # metadata.append_oefos(oefos_ids)
+
+    # metadata.append_oefos(oefos_ids) # noqa: ERA001
     for id_ in oefos_ids:
         metadata.append_oefos_id(id_)
         metadata.append_oefos_id(id_, "en")

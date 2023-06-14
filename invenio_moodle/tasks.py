@@ -17,13 +17,13 @@ from .utils import fetch_moodle
 
 
 @shared_task(ignore_result=True)
-def try_fetch_moodle_except_mail():
+def try_fetch_moodle_except_mail() -> None:
     """Fetch data from moodle and enter it into database."""
     try:
         moodle_fetch_url = current_app.config["MOODLE_FETCH_URL"]
         fetch_moodle(moodle_fetch_url)
 
-    except Exception:  # pylint: disable=broad-except
+    except Exception:  # noqa: BLE001
         config = current_app.config
         msg = Message(
             "Something went wrong when fetching data from moodle",

@@ -24,9 +24,10 @@ class ClassificationValuesSchema(Schema):
 class ClassificationSchema(Schema):
     """Moodle classification schema."""
 
-    type = Constant("oefos", required=True)
+    type = Constant("oefos", required=True)  # noqa: A003
     url = Constant(
-        "https://www.data.gv.at/katalog/dataset/stat_ofos-2012", required=True
+        "https://www.data.gv.at/katalog/dataset/stat_ofos-2012",
+        required=True,
     )
     values = List(Nested(ClassificationValuesSchema), required=True)
 
@@ -85,7 +86,7 @@ class FileSchema(Schema):
     filesize = String(required=True)
     fileurl = String(required=True)
     language = String(required=True)
-    license = Nested(LicenseSchema)
+    license = Nested(LicenseSchema)  # noqa: A003
     mimetype = String(required=True)
     persons = List(Nested(PersonSchema), required=True)
     resourcetype = String(required=True)
@@ -112,7 +113,7 @@ class MoodleSchema(Schema):
     moodlecourses = List(Nested(MoodleCourseSchema), required=True)
 
     @validates_schema
-    def validate_urls_unique(self, data, **__):
+    def validate_urls_unique(self, data: dict, **__: dict) -> None:
         """Check that each file-URL only appears once."""
         urls_counter = Counter(
             file["fileurl"]
@@ -121,11 +122,16 @@ class MoodleSchema(Schema):
         )
         duplicated_urls = [url for url, count in urls_counter.items() if count > 1]
         if duplicated_urls:
-            raise ValidationError("Different file-JSONs with same URL.")
+            msg = "Different file-JSONs with same URL."
+            raise ValidationError(msg)
 
     @validates_schema
-    def validate_course_jsons_unique_per_courseid(self, data, **__):
-        """Check that course-ids that appear multiple times have same json in all their appearances."""
+    def validate_course_jsons_unique_per_courseid(self, data: dict, **__: dict) -> None:
+        """Validate against unique courseid.
+
+        Check that course-ids that appear multiple times have same
+        json in all their appearances.
+        """
         jsons_by_courseid = defaultdict(list)
         for moodlecourse in data["moodlecourses"]:
             for file in moodlecourse["files"]:
@@ -136,7 +142,11 @@ class MoodleSchema(Schema):
         ambiguous_courseids = {
             courseid for courseid, jsons in jsons_by_courseid.items() if len(jsons) > 1
         }
-        # '0' is special courseid shared by all moodle-only courses, it is allowed to be ambiguous
+
+        # '0' is special courseid shared by all moodle-only courses,
+        # it is allowed to be ambiguous
         ambiguous_courseids -= {"0"}
+
         if ambiguous_courseids:
-            raise ValidationError("Different course-JSONs with same courseid.")
+            msg = "Different course-JSONs with same courseid."
+            raise ValidationError(msg)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2022 Graz University of Technology.
+# Copyright (C) 2022-2023 Graz University of Technology.
 #
 # invenio-moodle is free software; you can redistribute it and/or modify
 # it under the terms of the MIT License; see LICENSE file for more details.
@@ -8,21 +8,34 @@
 """Create links between lom records."""
 
 import copy
-from functools import partial
+from collections.abc import Callable
 
-from invenio_access.permissions import system_identity
 from invenio_pidstore.errors import PIDDoesNotExistError
 from invenio_pidstore.models import PersistentIdentifier
-from invenio_records_lom.proxies import current_records_lom
 
+from .decorators import read
 from .types import CourseKey, FileKey, Key, Link, Links, TaskLog, TaskLogs, UnitKey
 
 
-def add_file_key_links(links: Links, task_logs: TaskLogs, key: Key, task_log: TaskLog):
+def is_moodle_only_course(moodle_course_json: dict) -> bool:
+    """Check if it is a moodle only course."""
+    return moodle_course_json["courseid"] == "0"
+
+
+def is_course_the_root(sourceid: str) -> bool:
+    """Check if parent exists."""
+    return sourceid == "-1"
+
+
+def add_file_key_links(
+    links: Links,
+    task_logs: TaskLogs,
+    key: Key,
+    task_log: TaskLog,
+) -> Links:
     """Get file key links."""
     for moodle_course_json in task_log.moodle_file_json["courses"]:
-        if moodle_course_json["courseid"] == "0":
-            # don't consider moodle-only-courses
+        if is_moodle_only_course(moodle_course_json):
             continue
 
         unit_key = UnitKey.from_json(task_log.moodle_file_json, moodle_course_json)
@@ -33,28 +46,36 @@ def add_file_key_links(links: Links, task_logs: TaskLogs, key: Key, task_log: Ta
     return links
 
 
-def add_unit_key_links(links: Links, task_logs: TaskLogs, key: Key, task_log: TaskLog):
-    """Get unit key links."""
-    # link unit with course
+def add_unit_key_links(
+    links: Links,
+    task_logs: TaskLogs,
+    key: Key,
+    task_log: TaskLog,
+) -> None:
+    """Link unit with course."""
     course_key = CourseKey(key.courseid)
     course_log = task_logs[course_key]
     links.add(Link(key, "ispartof", course_log.pid))
     links.add(Link(course_key, "haspart", task_log.pid))
 
 
+@read
 def add_course_key_links(
-    links: Links, task_logs: TaskLogs, key: Key, task_log: TaskLog
-):
-    """Get course key links."""
-    # link course with previous course, if it exists
+    links: Links,
+    task_logs: TaskLogs,
+    key: Key,
+    task_log: TaskLog,
+    read: Callable,
+) -> None:
+    """Link course with previous course, if it exists."""
     sourceid = task_log.moodle_course_json["sourceid"]
-    if sourceid == "-1":
-        # course has no associated preceding course
+
+    if is_course_the_root(sourceid):
         return
 
     source_course_key = CourseKey(sourceid)
     try:
-        pid_value = source_course_key.to_string_key()
+        pid_value = str(source_course_key)
         moodle_pid = PersistentIdentifier.get(pid_type="moodle", pid_value=pid_value)
     except PIDDoesNotExistError:
         # source course has no entry in database
@@ -62,8 +83,6 @@ def add_course_key_links(
 
     if source_course_key not in task_logs:
         # add task-log for source-course
-        service = current_records_lom.records_service
-        read = partial(service, identity=system_identity)
 
         lomid_pid = PersistentIdentifier.get_by_object(
             pid_type="lomid",
@@ -84,7 +103,6 @@ def add_course_key_links(
     links.add(Link(key, "continues", task_logs[source_course_key].pid))
 
 
-# pylint: disable-next=too-many-locals
 def get_links(task_logs: TaskLogs) -> Links:
     """Infer links from `task_logs`.
 
@@ -94,8 +112,7 @@ def get_links(task_logs: TaskLogs) -> Links:
 
     links elements are of form (file_key, 'ispartof', 'asdfg-hjk42')
     """
-
-    links: Links = set()  # to be result
+    links: Links = set()
 
     for key, task_log in task_logs.items():
         if isinstance(key, FileKey):
@@ -105,6 +122,7 @@ def get_links(task_logs: TaskLogs) -> Links:
         elif isinstance(key, CourseKey):
             add_course_key_links(links, task_logs, key, task_log)
         else:
-            raise TypeError("Cannot handle key of type {type(key)}.")
+            msg = f"Cannot handle key of type {type(key)}."
+            raise TypeError(msg)
 
     return links

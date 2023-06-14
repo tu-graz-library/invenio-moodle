@@ -12,12 +12,12 @@ from flask import Flask
 from invenio_moodle import InvenioMoodle, __version__
 
 
-def test_version():
+def test_version() -> None:
     """Test version import."""
     assert __version__
 
 
-def test_init():
+def test_init() -> None:
     """Test extension initialization."""
     app = Flask("testapp")
     ext = InvenioMoodle(app)

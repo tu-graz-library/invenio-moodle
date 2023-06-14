@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2022 Graz University of Technology.
+# Copyright (C) 2022-2023 Graz University of Technology.
 #
 # invenio-moodle is free software; you can redistribute it and/or modify
 # it under the terms of the MIT License; see LICENSE file for more details.
@@ -36,7 +36,12 @@ from .types import (
 )
 
 
-def save_file_locally(response: Response, idx: int, directory: Path):
+def save_file_locally(
+    response: Response,
+    idx: int,
+    directory: Path,
+) -> tuple[str, Path]:
+    """Save file locally."""
     # find filename in headers
     dispos = response.headers.get("content-disposition", "")
 
@@ -46,12 +51,13 @@ def save_file_locally(response: Response, idx: int, directory: Path):
     if match := re.search('filename="([^"]*)"', dispos):
         filename = match.group(1)
     else:
-        raise ValueError(f"couldn't find filename in header {dispos}")
+        msg = f"couldn't find filename in header {dispos}"
+        raise ValueError(msg)
 
     # save file to `directory`, compute its hash along the way
     # filepath is of form 'directory/0/file.pdf'
     filepath = directory.joinpath(str(idx), filename.replace(" ", "_"))
-    hash_ = hashlib.md5()
+    hash_ = hashlib.md5()  # noqa: S324
 
     # create 'directory/0/'
     filepath.parent.mkdir(parents=True)
@@ -69,10 +75,14 @@ def cache_files(
     provided_filepaths_by_url: FilePaths,
     urls: list[str],
 ) -> FileCache:
-    """Creates a file-cache, downloading unprovided files into `directory` and hashing all files.
+    """Create a file-cache.
+
+    It creates a file-cache by downloading unprovided files into
+    `directory` and hashing all files.
 
     :param Path directory: The directory to download unprovided files into.
-    :param dict[str, Path] provided_filepaths_by_url: A dictionary that maps some urls to filepaths.
+    :param dict[str, Path] provided_filepaths_by_url:
+        A dictionary that maps some urls to filepaths.
         When a url is in `provided_filepaths_by_url`,
         the file on the corresponding filepath is cached.
         Otherwise the file is downloaded from file-url.
@@ -82,9 +92,9 @@ def cache_files(
     directory = Path(directory)
 
     # add provided file-infos to `file_cache`
-    for url, path in provided_filepaths_by_url.items():
-        hash_ = hashlib.md5()
-        path = Path(path)
+    for url, _path in provided_filepaths_by_url.items():
+        hash_ = hashlib.md5()  # noqa: S324
+        path = Path(_path)
         with path.open(mode="rb", buffering=1024 * 1024) as file:
             for chunk in file:
                 hash_.update(chunk)
@@ -106,19 +116,23 @@ def cache_files(
     return file_cache
 
 
-def build_file_cache(temp_dir, moodle_file_jsons, filepaths_by_url):
+def build_file_cache(
+    temp_dir: str,
+    moodle_file_jsons: list[dict],
+    filepaths_by_url: list[str],
+) -> FileCache:
     """Build file cache."""
-    temp_dir = Path(temp_dir)
+    temp = Path(temp_dir)
     urls = [jsn["fileurl"] for jsn in moodle_file_jsons]
     file_cache: FileCache = cache_files(
-        directory=temp_dir,
+        directory=temp,
         provided_filepaths_by_url=filepaths_by_url,
         urls=urls,
     )
     return file_cache
 
 
-def create_moodle_file_jsons(moodle_data: dict):
+def create_moodle_file_jsons(moodle_data: dict) -> list:
     """Create moodle file jsons."""
     return [
         file_json
@@ -128,7 +142,9 @@ def create_moodle_file_jsons(moodle_data: dict):
 
 
 def prepare_files(
-    temp_dir: str, moodle_data: dict, filepaths_by_url: FilePaths
+    temp_dir: str,
+    moodle_data: dict,
+    filepaths_by_url: FilePaths,
 ) -> TaskLogs:
     """Prepare files."""
     moodle_file_jsons = create_moodle_file_jsons(moodle_data)
@@ -151,7 +167,7 @@ def fetch_else_create(key: Key) -> TaskLog:
     create = partial(service.create, identity=system_identity)
     read = partial(service.read, identity=system_identity)
 
-    database_key = key.to_string_key()
+    database_key = str(key)
     try:
         moodle_pid = PersistentIdentifier.get(pid_type="moodle", pid_value=database_key)
     except PIDDoesNotExistError:
@@ -188,7 +204,8 @@ def prepare_tasks(moodle_file_jsons: list, file_cache: FileCache) -> TaskLogs:
     """
     task_logs = {}  # to be result
 
-    # prepare: gather necessary information, create records if no previous versions exist
+    # prepare: gather necessary information, create records if no
+    # previous versions exist
     for moodle_file_json in moodle_file_jsons:
         file_key = FileKey.from_json_and_cache(moodle_file_json, file_cache)
         file_item = fetch_else_create(file_key)
@@ -217,9 +234,12 @@ def prepare_tasks(moodle_file_jsons: list, file_cache: FileCache) -> TaskLogs:
     return task_logs
 
 
-# pylint: disable-next=too-many-locals
 def insert_files_into_db(task_logs: TaskLogs, file_cache: FileCache) -> None:
-    """Insert files referenced by `task_logs` into database using files from `file_cache`."""
+    """Insert files into DB.
+
+    Insert files into db referenced by `task_logs` into database using
+    files from `file_cache`.
+    """
     service = current_records_lom.records_service
     edit = partial(service.edit, identity=system_identity)
 
@@ -245,7 +265,10 @@ def insert_files_into_db(task_logs: TaskLogs, file_cache: FileCache) -> None:
 
         # LOM-records of resource_type 'file' may only have at most 1 file attached
         if len(former_files) > 1:
-            msg = "encountered LOM-record of resource_type 'file' with more than 1 file attached"
+            msg = (
+                "encountered LOM-record of resource_type 'file'"
+                " with more than 1 file attached"
+            )
             raise ValueError(msg)
 
         # a file is already attached
@@ -260,7 +283,8 @@ def insert_files_into_db(task_logs: TaskLogs, file_cache: FileCache) -> None:
         # upload file
         filename = file_info.path.name
         init_files(id_=task_log.pid, data=[{"key": filename}])
-        # TODO: 1024 * 1024 may be a problem?
+
+        # ATTENTION: 1024 * 1024 may be a problem?
         with file_info.path.open(mode="rb", buffering=1024 * 1024) as fp:
             set_file_content(id_=task_log.pid, file_key=filename, stream=fp)
         commit_file(id_=task_log.pid, file_key=filename)

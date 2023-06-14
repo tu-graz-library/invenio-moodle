@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2022 Graz University of Technology.
+# Copyright (C) 2022-2023 Graz University of Technology.
 #
 # invenio-moodle is free software; you can redistribute it and/or modify
 # it under the terms of the MIT License; see LICENSE file for more details.
@@ -9,10 +9,21 @@
 
 from __future__ import annotations
 
-import typing
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
+
+
+@dataclass(frozen=True)
+class Color:
+    """The class is for the output color management."""
+
+    neutral = "white"
+    error = "red"
+    warning = "yellow"
+    abort = "magenta"
+    success = "green"
+    alternate = ("blue", "cyan")
 
 
 @dataclass(frozen=True)
@@ -33,7 +44,7 @@ class Key(ABC):
         """The resource_type associated to the key, one of `LOM_RESOURCE_TYPES`."""
 
     @abstractmethod
-    def to_string_key(self) -> str:
+    def __str__(self) -> str:
         """Convert `self` to unique string representation."""
 
 
@@ -53,7 +64,7 @@ class FileKey(Key):
         cls,
         moodle_file_json: str,
         file_cache: dict[str, FileCacheInfo],
-    ):
+    ) -> FileKey:
         """Create `cls` via info from moodle-json and file-cache."""
         url = moodle_file_json["fileurl"]
         year = moodle_file_json["year"]
@@ -61,9 +72,13 @@ class FileKey(Key):
         hash_md5 = file_cache[url].hash_md5
         return cls(url=url, year=year, semester=semester, hash_md5=hash_md5)
 
-    def to_string_key(self):
+    def __str__(self) -> str:
         """Get string-representation."""
-        return f"FileKey(url={self.url}, year={self.year}, semester={self.semester}, hash_md5={self.hash_md5})"
+        url = f"url={self.url}"
+        year = f"year={self.year}"
+        semester = f"semester={self.semester}"
+        hash_md5 = f"hash_md5={self.hash_md5}"
+        return f"FileKey({url}, {year}, {semester}, {hash_md5})"
 
 
 @dataclass(frozen=True)
@@ -77,16 +92,19 @@ class UnitKey(Key):
     resource_type = "unit"
 
     @classmethod
-    def from_json(cls, moodle_file_json, moodle_course_json):
+    def from_json(cls, moodle_file_json: dict, moodle_course_json: dict) -> UnitKey:
         """Create `cls` via info from moodle-json."""
         courseid = moodle_course_json["courseid"]
         year = moodle_file_json["year"]
         semester = moodle_file_json["semester"]
         return cls(courseid=courseid, year=year, semester=semester)
 
-    def to_string_key(self):
+    def __str__(self) -> str:
         """Get string-representation."""
-        return f"UnitKey(courseid={self.courseid}, year={self.year}, semester={self.semester})"
+        course_id = f"courseid={self.courseid}"
+        year = f"year={self.year}"
+        semester = f"semester={self.semester}"
+        return f"UnitKey({course_id}, {year}, {semester})"
 
 
 @dataclass(frozen=True)
@@ -98,14 +116,15 @@ class CourseKey(Key):
     resource_type = "course"
 
     @classmethod
-    def from_json(cls, moodle_course_json):
+    def from_json(cls, moodle_course_json: dict) -> CourseKey:
         """Create `cls` via info from moodle-json."""
         courseid = moodle_course_json["courseid"]
         return cls(courseid=courseid)
 
-    def to_string_key(self):
+    def __str__(self) -> str:
         """Get string-representation."""
-        return f"CourseKey(courseid={self.courseid})"
+        course_id = f"courseid={self.courseid}"
+        return f"CourseKey({course_id})"
 
 
 @dataclass
@@ -128,7 +147,7 @@ class Link:
     value: str
 
 
-TaskLogs = typing.Dict[Key, TaskLog]
-FileCache = typing.Dict[str, FileCacheInfo]
-Links = typing.Set[Link]
-FilePaths = typing.Dict[str, Path]
+TaskLogs = dict[Key, TaskLog]
+FileCache = dict[str, FileCacheInfo]
+Links = set[Link]
+FilePaths = dict[str, Path]

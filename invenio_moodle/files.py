@@ -12,6 +12,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import re
+from collections.abc import Callable
 from functools import partial
 from pathlib import Path
 
@@ -23,6 +24,14 @@ from invenio_records_lom.utils import LOMMetadata
 from requests import Response, Session
 from sqlalchemy.orm.exc import NoResultFound
 
+from .decorators import (
+    commit_file,
+    edit,
+    init_files,
+    list_draft_files,
+    list_files,
+    set_file_content,
+)
 from .types import (
     CourseKey,
     FileCache,
@@ -30,8 +39,8 @@ from .types import (
     FileKey,
     FilePaths,
     Key,
-    TaskLog,
-    TaskLogs,
+    Task,
+    Tasks,
     UnitKey,
 )
 
@@ -145,7 +154,7 @@ def prepare_files(
     temp_dir: str,
     moodle_data: dict,
     filepaths_by_url: FilePaths,
-) -> TaskLogs:
+) -> tuple[Tasks, FileCache]:
     """Prepare files."""
     moodle_file_jsons = create_moodle_file_jsons(moodle_data)
 
@@ -158,7 +167,7 @@ def prepare_files(
     return task_logs, file_cache
 
 
-def fetch_else_create(key: Key) -> TaskLog:
+def fetch_else_create(key: Key) -> Task:
     """Fetch moodle-result corresponding to `key`, create database-entry if none exists.
 
     :param Key key: the key which to attempt fetching from pidstore
@@ -192,17 +201,17 @@ def fetch_else_create(key: Key) -> TaskLog:
         previous_json = read(id_=pid).to_dict()
         json_ = copy.deepcopy(previous_json)
 
-    return TaskLog(pid=pid, previous_json=previous_json, json=json_)
+    return Task(key=key, pid=pid, previous_json=previous_json, json=json_)
 
 
-def prepare_tasks(moodle_file_jsons: list, file_cache: FileCache) -> TaskLogs:
+def prepare_tasks(moodle_file_jsons: list, file_cache: FileCache) -> Tasks:
     """Prepare database-drafts, initialize one `TaskLog` per draft.
 
     :param dict moodle_data: Data whose format matches `MoodleSchema`
     :param dict[str, FileCacheInfo] file_cache: file-cache,
         contains one file per "fileurl" within `moodle_data`
     """
-    task_logs = {}  # to be result
+    tasks = Tasks()
 
     # prepare: gather necessary information, create records if no
     # previous versions exist
@@ -210,7 +219,7 @@ def prepare_tasks(moodle_file_jsons: list, file_cache: FileCache) -> TaskLogs:
         file_key = FileKey.from_json_and_cache(moodle_file_json, file_cache)
         file_item = fetch_else_create(file_key)
         file_item.moodle_file_json = moodle_file_json
-        task_logs[file_key] = file_item
+        tasks.append(file_item)
 
         for moodle_course_json in moodle_file_json["courses"]:
             if moodle_course_json["courseid"] == "0":
@@ -218,50 +227,54 @@ def prepare_tasks(moodle_file_jsons: list, file_cache: FileCache) -> TaskLogs:
                 continue
 
             unit_key = UnitKey.from_json(moodle_file_json, moodle_course_json)
-            if unit_key not in task_logs:
+            if unit_key not in tasks:
                 unit_item = fetch_else_create(unit_key)
                 unit_item.moodle_file_json = moodle_file_json
                 unit_item.moodle_course_json = moodle_course_json
-                task_logs[unit_key] = unit_item
+                tasks.append(unit_item)
 
             course_key = CourseKey.from_json(moodle_course_json)
-            if course_key not in task_logs:
+            if course_key not in tasks:
                 course_item = fetch_else_create(course_key)
                 course_item.moodle_file_json = moodle_file_json
                 course_item.moodle_course_json = moodle_course_json
-                task_logs[course_key] = course_item
+                tasks.append(course_item)
 
-    return task_logs
+    return tasks
 
 
-def insert_files_into_db(task_logs: TaskLogs, file_cache: FileCache) -> None:
+@edit
+@commit_file
+@init_files
+@list_draft_files
+@set_file_content
+@list_files
+def insert_files_into_db(
+    tasks: Tasks,
+    file_cache: FileCache,
+    edit: Callable,
+    commit_file: Callable,
+    init_files: Callable,
+    list_draft_files: Callable,
+    set_file_content: Callable,
+    list_files: Callable,
+) -> None:
     """Insert files into DB.
 
     Insert files into db referenced by `task_logs` into database using
     files from `file_cache`.
     """
-    service = current_records_lom.records_service
-    edit = partial(service.edit, identity=system_identity)
-
-    df_service = service.draft_files
-    commit_file = partial(df_service.commit_file, identity=system_identity)
-    init_files = partial(df_service.init_files, identity=system_identity)
-    list_draft_files = partial(df_service.list_files, identity=system_identity)
-    set_file_content = partial(df_service.set_file_content, identity=system_identity)
-
-    list_files = partial(service.files.list_files, identity=system_identity)
-
-    for key, task_log in task_logs.items():
-        if not isinstance(key, FileKey):
+    for task in tasks:
+        if not isinstance(task.key, FileKey):
             continue
 
-        file_info = file_cache[key.url]
+        file_info = file_cache[task.key.url]
 
         # get files
         try:
-            former_files = list(list_draft_files(id_=task_log.pid).entries)
+            former_files = list(list_draft_files(id_=task.pid).entries)
         except NoResultFound:
-            former_files = list(list_files(id_=task_log.pid).entries)
+            former_files = list(list_files(id_=task.pid).entries)
 
         # LOM-records of resource_type 'file' may only have at most 1 file attached
         if len(former_files) > 1:
@@ -278,15 +291,15 @@ def insert_files_into_db(task_logs: TaskLogs, file_cache: FileCache) -> None:
         # no file attached yet ~> attach file
 
         # ensure a draft exists (files can only be uploaded to a draft, not to a record)
-        edit(id_=task_log.pid)
+        edit(id_=task.pid)
 
         # upload file
         filename = file_info.path.name
-        init_files(id_=task_log.pid, data=[{"key": filename}])
+        init_files(id_=task.pid, data=[{"key": filename}])
 
         # ATTENTION: 1024 * 1024 may be a problem?
         with file_info.path.open(mode="rb", buffering=1024 * 1024) as fp:
-            set_file_content(id_=task_log.pid, file_key=filename, stream=fp)
-        commit_file(id_=task_log.pid, file_key=filename)
+            set_file_content(id_=task.pid, file_key=filename, stream=fp)
+        commit_file(id_=task.pid, file_key=filename)
 
-        task_log.json["files"]["default_preview"] = filename
+        task.json["files"]["default_preview"] = filename

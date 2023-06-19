@@ -14,7 +14,6 @@ from tempfile import TemporaryDirectory
 
 from invenio_records_lom.utils import LOMMetadata
 from invenio_records_resources.services.uow import UnitOfWork, unit_of_work
-from requests import get
 from sqlalchemy.orm.exc import NoResultFound
 
 from .convert import update_course_metadata, update_file_metadata, update_unit_metadata
@@ -22,44 +21,44 @@ from .decorators import edit, publish, resolve, update_draft
 from .files import insert_files_into_db, prepare_files
 from .links import get_links
 from .schemas import MoodleSchema
-from .types import CourseKey, FileKey, FilePaths, TaskLogs, UnitKey
+from .types import CourseKey, FileKey, FilePaths, Tasks, UnitKey
 
 
 @edit
 @update_draft
-def update_drafts(task_logs: TaskLogs, edit: Callable, update_draft: Callable) -> None:
+def update_drafts(tasks: Tasks, edit: Callable, update_draft: Callable) -> None:
     """Update drafts."""
-    for task_log in task_logs.values():
-        if task_log.previous_json == task_log.json:
+    for task in tasks:
+        if task.previous_json == task.json:
             continue
 
         # json got updated, now update database with new json
-        edit(id_=task_log.pid)  # ensure a draft exists
-        update_draft(id_=task_log.pid, data=task_log.json)
+        edit(id_=task.pid)  # ensure a draft exists
+        update_draft(id_=task.pid, data=task.json)
 
 
 @unit_of_work()
 @resolve
 @publish
 def publish_created_drafts(
-    task_logs: TaskLogs,
+    tasks: Tasks,
     resolve: Callable,
     publish: Callable,
     uow: UnitOfWork = None,
 ) -> None:
     """Publish created drafts."""
-    for task_log in task_logs.values():
+    for task in tasks:
         # only publish if a draft was created
         # (drafts are created iff record-updates are needed)
         try:
             # check if a draft exists for task_log.pid
-            resolve(pid_value=task_log.pid)
+            resolve(pid_value=task.pid)
         except NoResultFound:
             # no draft found: continue
             continue
         else:
             # draft exists: publish
-            publish(id_=task_log.pid, uow=uow)
+            publish(id_=task.pid, uow=uow)
 
 
 def insert_moodle_into_db(
@@ -112,13 +111,3 @@ def insert_moodle_into_db(
 
     update_drafts(task_logs)
     publish_created_drafts(task_logs)
-
-
-def fetch_moodle(moodle_fetch_url: str) -> None:
-    """Fetch data from MOODLE_FETCH_URL and insert it into the database."""
-    response = get(moodle_fetch_url, timeout=10)
-    response.raise_for_status()
-
-    moodle_data = response.json()
-
-    insert_moodle_into_db(moodle_data)

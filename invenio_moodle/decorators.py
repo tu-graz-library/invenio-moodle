@@ -80,3 +80,80 @@ def read(func: Callable) -> Callable:
         func(*args, **kwargs)
 
     return wrapper
+
+
+def commit_file(func: Callable) -> Callable:
+    """Read decorator."""
+
+    @wraps(func)
+    def wrapper(*args: dict, **kwargs: dict) -> Callable:
+        """Wrap."""
+        df_service = current_records_lom.records_service.draft_files
+        kwargs["commit_file"] = partial(
+            df_service.commit_file,
+            identity=system_identity,
+        )
+        func(*args, **kwargs)
+
+    return wrapper
+
+
+def init_files(func: Callable) -> Callable:
+    """Read decorator."""
+
+    @wraps(func)
+    def wrapper(*args: dict, **kwargs: dict) -> Callable:
+        """Wrap."""
+        df_service = current_records_lom.records_service.draft_files
+        kwargs["init_files"] = partial(df_service.init_files, identity=system_identity)
+        func(*args, **kwargs)
+
+    return wrapper
+
+
+def list_draft_files(func: Callable) -> Callable:
+    """Read decorator."""
+
+    @wraps(func)
+    def wrapper(*args: dict, **kwargs: dict) -> Callable:
+        """Wrap."""
+        df_service = current_records_lom.records_service.draft_files
+        kwargs["list_draft_files"] = partial(
+            df_service.list_files,
+            identity=system_identity,
+        )
+        func(*args, **kwargs)
+
+    return wrapper
+
+
+def set_file_content(func: Callable) -> Callable:
+    """Read decorator."""
+
+    @wraps(func)
+    def wrapper(*args: dict, **kwargs: dict) -> Callable:
+        """Wrap."""
+        df_service = current_records_lom.records_service.draft_files
+        kwargs["set_file_content"] = partial(
+            df_service.set_file_content,
+            identity=system_identity,
+        )
+        func(*args, **kwargs)
+
+    return wrapper
+
+
+def list_files(func: Callable) -> Callable:
+    """Read decorator."""
+
+    @wraps(func)
+    def wrapper(*args: dict, **kwargs: dict) -> Callable:
+        """Wrap."""
+        service = current_records_lom.records_service
+        kwargs["list_files"] = partial(
+            service.files.list_files,
+            identity=system_identity,
+        )
+        func(*args, **kwargs)
+
+    return wrapper

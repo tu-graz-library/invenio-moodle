@@ -128,14 +128,30 @@ class CourseKey(Key):
 
 
 @dataclass
-class TaskLog:
+class Task:
     """Stores data."""
 
+    key: Key
     pid: str
     previous_json: dict
     json: dict
     moodle_file_json: dict = None
     moodle_course_json: dict = None
+
+
+class Tasks(list):
+    """List of tasks."""
+
+    def __getitem__(self, key: Key) -> Task | None:
+        """Return the task by key."""
+        for task in self:
+            if task.key == key:
+                return task
+        return None
+
+    def __contains__(self, task: Task) -> bool:
+        """Return true if task exists already."""
+        return any(task.key == t.key for t in self)
 
 
 @dataclass(frozen=True)
@@ -147,7 +163,6 @@ class Link:
     value: str
 
 
-TaskLogs = dict[Key, TaskLog]
 FileCache = dict[str, FileCacheInfo]
 Links = set[Link]
 FilePaths = dict[str, Path]

@@ -13,7 +13,7 @@ from celery import shared_task
 from flask import current_app
 from flask_mail import Message
 
-from .utils import fetch_moodle
+from .api import fetch_moodle
 
 
 @shared_task(ignore_result=True)

@@ -9,9 +9,15 @@
 
 from __future__ import annotations
 
+import typing as t
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Generator
 from dataclasses import dataclass
+from functools import singledispatchmethod
 from pathlib import Path
+
+if t.TYPE_CHECKING:
+    from invenio_records_lom import LOMMetadata
 
 
 @dataclass(frozen=True)
@@ -59,18 +65,26 @@ class FileKey(Key):
 
     resource_type = "file"
 
-    @classmethod
-    def from_json_and_cache(
-        cls,
-        moodle_file_json: str,
+    @singledispatchmethod
+    def __init__(self, url: str, year: str, semester: str, hash_md5: str) -> None:
+        """Construct."""
+        object.__setattr__(self, "url", url)
+        object.__setattr__(self, "year", year)
+        object.__setattr__(self, "semester", semester)
+        object.__setattr__(self, "hash_md5", hash_md5)
+
+    @__init__.register
+    def _(
+        self,
+        moodle_file_metadata: dict,
         file_cache: dict[str, FileCacheInfo],
     ) -> FileKey:
         """Create `cls` via info from moodle-json and file-cache."""
-        url = moodle_file_json["fileurl"]
-        year = moodle_file_json["year"]
-        semester = moodle_file_json["semester"]
+        url = moodle_file_metadata["fileurl"]
+        year = moodle_file_metadata["year"]
+        semester = moodle_file_metadata["semester"]
         hash_md5 = file_cache[url].hash_md5
-        return cls(url=url, year=year, semester=semester, hash_md5=hash_md5)
+        return self.__init__(url=url, year=year, semester=semester, hash_md5=hash_md5)
 
     def __str__(self) -> str:
         """Get string-representation."""
@@ -91,13 +105,20 @@ class UnitKey(Key):
 
     resource_type = "unit"
 
-    @classmethod
-    def from_json(cls, moodle_file_json: dict, moodle_course_json: dict) -> UnitKey:
+    @singledispatchmethod
+    def __init__(self, courseid: str, year: str, semester: str) -> None:
+        """Construct UnitKey."""
+        object.__setattr__(self, "courseid", courseid)
+        object.__setattr__(self, "year", year)
+        object.__setattr__(self, "semester", semester)
+
+    @__init__.register
+    def _(self, moodle_file_json: dict, moodle_course_json: dict) -> None:
         """Create `cls` via info from moodle-json."""
         courseid = moodle_course_json["courseid"]
         year = moodle_file_json["year"]
         semester = moodle_file_json["semester"]
-        return cls(courseid=courseid, year=year, semester=semester)
+        return self.__init__(courseid=courseid, year=year, semester=semester)
 
     def __str__(self) -> str:
         """Get string-representation."""
@@ -115,11 +136,16 @@ class CourseKey(Key):
 
     resource_type = "course"
 
-    @classmethod
-    def from_json(cls, moodle_course_json: dict) -> CourseKey:
+    @singledispatchmethod
+    def __init__(self, courseid: str) -> None:
+        """Construct CourseKey."""
+        object.__setattr__(self, "courseid", courseid)
+
+    @__init__.register
+    def _(self, moodle_course_metadata: dict) -> None:
         """Create `cls` via info from moodle-json."""
-        courseid = moodle_course_json["courseid"]
-        return cls(courseid=courseid)
+        courseid = moodle_course_metadata["courseid"]
+        return self.__init__(courseid=courseid)
 
     def __str__(self) -> str:
         """Get string-representation."""
@@ -133,10 +159,14 @@ class Task:
 
     key: Key
     pid: str
-    previous_json: dict
-    json: dict
-    moodle_file_json: dict = None
-    moodle_course_json: dict = None
+    previous_metadata: dict
+    metadata: LOMMetadata
+    moodle_file_metadata: dict = None
+    moodle_course_metadata: dict = None
+
+    def update_metadata(self, metadata: LOMMetadata) -> None:
+        """Set metadata."""
+        self.metadata = metadata
 
 
 class Tasks(list):
@@ -153,6 +183,12 @@ class Tasks(list):
         """Return true if task exists already."""
         return any(task.key == t.key for t in self)
 
+    def filter_by(self, key: Key) -> Generator[Task, None, None]:
+        """Filter tasks by func."""
+        for task in self:
+            if isinstance(task.key, key):
+                yield task
+
 
 @dataclass(frozen=True)
 class Link:
@@ -165,4 +201,3 @@ class Link:
 
 FileCache = dict[str, FileCacheInfo]
 Links = set[Link]
-FilePaths = dict[str, Path]

@@ -18,12 +18,12 @@ from .decorators import read
 from .types import CourseKey, FileKey, Key, Link, Links, Task, Tasks, UnitKey
 
 
-def is_moodle_only_course(moodle_course_json: dict) -> bool:
+def is_moodle_only_course(moodle_course_metadata: dict) -> bool:
     """Check if it is a moodle only course."""
-    return moodle_course_json["courseid"] == "0"
+    return moodle_course_metadata["courseid"] == "0"
 
 
-def is_course_the_root(sourceid: str) -> bool:
+def is_course_root(sourceid: str) -> bool:
     """Check if parent exists."""
     return sourceid == "-1"
 
@@ -43,13 +43,13 @@ def _(
     task: Task,
 ) -> Links:
     """Get file key links."""
-    for moodle_course_json in task.moodle_file_json["courses"]:
-        if is_moodle_only_course(moodle_course_json):
+    for moodle_course_metadata in task.moodle_file_metadata["courses"]:
+        if is_moodle_only_course(moodle_course_metadata):
             continue
 
-        unit_key = UnitKey.from_json(task.moodle_file_json, moodle_course_json)
-        unit_log = tasks[unit_key]  # <--- somehow strange TODO
-        links.add(Link(key, "ispartof", unit_log.pid))
+        unit_key = UnitKey(task.moodle_file_json, moodle_course_metadata)
+        unit_task = tasks[unit_key]  # <--- somehow strange TODO
+        links.add(Link(key, "ispartof", unit_task.pid))
         links.add(Link(unit_key, "haspart", task.pid))
 
     return links
@@ -64,8 +64,8 @@ def _(
 ) -> None:
     """Link unit with course."""
     course_key = CourseKey(key.courseid)
-    course_log = tasks[course_key]
-    links.add(Link(key, "ispartof", course_log.pid))
+    course_task = tasks[course_key]
+    links.add(Link(key, "ispartof", course_task.pid))
     links.add(Link(course_key, "haspart", task.pid))
 
 
@@ -81,34 +81,34 @@ def _(
     """Link course with previous course, if it exists."""
     sourceid = task.moodle_course_json["sourceid"]
 
-    if is_course_the_root(sourceid):
+    if is_course_root(sourceid):
         return
 
     source_course_key = CourseKey(sourceid)
     try:
-        pid_value = str(source_course_key)
-        moodle_pid = PersistentIdentifier.get(pid_type="moodle", pid_value=pid_value)
+        moodle_pid = PersistentIdentifier.get(
+            pid_type="moodle",
+            pid_value=str(source_course_key),
+        )
     except PIDDoesNotExistError:
         # source course has no entry in database
         return
 
     if source_course_key not in tasks:
-        # add task-log for source-course
-
         lomid_pid = PersistentIdentifier.get_by_object(
             pid_type="lomid",
             object_type=moodle_pid.object_type,
             object_uuid=moodle_pid.object_uuid,
         )
         pid: str = lomid_pid.pid_value
-        previous_json = read(id_=pid).to_dict()
-        json_ = copy.deepcopy(previous_json)
+        previous_metadata = read(id_=pid).to_dict()
+        json_ = copy.deepcopy(previous_metadata)
 
         tasks.append(
             Task(
                 key=source_course_key,
                 pid=pid,
-                previous_json=previous_json,
+                previous_metadata=previous_metadata,
                 json=json_,
             ),
         )
@@ -118,11 +118,11 @@ def _(
 
 
 def get_links(tasks: Tasks) -> Links:
-    """Infer links from `task_logs`.
+    """Infer links from `tasks`.
 
     Returns inferred links.
     If links to preceding courses are inferred and if those preceding courses exist,
-    those preceding courses will add a task_log to `task_logs`.
+    those preceding courses will add a task to `tasks`.
 
     links elements are of form (file_key, 'ispartof', 'asdfg-hjk42')
     """

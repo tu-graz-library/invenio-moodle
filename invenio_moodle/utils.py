@@ -9,19 +9,22 @@
 
 from __future__ import annotations
 
+import typing as t
 from collections.abc import Callable
+from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from invenio_records_lom.utils import LOMMetadata
 from invenio_records_resources.services.uow import UnitOfWork, unit_of_work
 from sqlalchemy.orm.exc import NoResultFound
 
-from .convert import update_course_metadata, update_file_metadata, update_unit_metadata
+from .convert import update_metadata
 from .decorators import edit, publish, resolve, update_draft
 from .files import insert_files_into_db, prepare_files
 from .links import get_links
 from .schemas import MoodleSchema
-from .types import CourseKey, FileKey, FilePaths, Tasks, UnitKey
+
+if t.TYPE_CHECKING:
+    from .types import Tasks
 
 
 @edit
@@ -29,7 +32,7 @@ from .types import CourseKey, FileKey, FilePaths, Tasks, UnitKey
 def update_drafts(tasks: Tasks, edit: Callable, update_draft: Callable) -> None:
     """Update drafts."""
     for task in tasks:
-        if task.previous_json == task.json:
+        if task.previous_metadata == task.metadata:
             continue
 
         # json got updated, now update database with new json
@@ -48,23 +51,16 @@ def publish_created_drafts(
 ) -> None:
     """Publish created drafts."""
     for task in tasks:
-        # only publish if a draft was created
-        # (drafts are created iff record-updates are needed)
         try:
-            # check if a draft exists for task_log.pid
+            # check if a draft exists for task.pid
             resolve(pid_value=task.pid)
         except NoResultFound:
-            # no draft found: continue
             continue
         else:
-            # draft exists: publish
             publish(id_=task.pid, uow=uow)
 
 
-def insert_moodle_into_db(
-    moodle_data: dict,
-    filepaths_by_url: FilePaths = None,
-) -> None:
+def insert_moodle_into_db(moodle_data: dict) -> None:
     """Insert data encoded in `moodle-data` into invenio-database.
 
     :param dict moodle_data: The data to be inserted into database,
@@ -78,36 +74,21 @@ def insert_moodle_into_db(
     # validate input
     moodle_data = MoodleSchema().load(moodle_data)
 
-    filepaths_by_url = filepaths_by_url or {}
-
     with TemporaryDirectory() as temp_dir:
-        task_logs, file_cache = prepare_files(temp_dir, moodle_data, filepaths_by_url)
+        tasks, file_cache = prepare_files(Path(temp_dir), moodle_data)
+        insert_files_into_db(tasks, file_cache)
 
-        # enter files into database
-        insert_files_into_db(task_logs, file_cache)
+    # link records to each other
+    for link in get_links(tasks):
+        task = tasks[link.key]
+        task.metadata.append_relation(link.value, kind=link.kind)
 
-    # link records
-    for link in get_links(task_logs):
-        task_log = task_logs[link.key]
-        metadata = LOMMetadata(task_log.json)
-        metadata.append_relation(link.value, kind=link.kind)
-        task_log.json = metadata.json
-
-    # update lom-jsons with info from moodle
-    for key, task_log in task_logs.items():
-        if task_log.moodle_file_json is None:
-            # this skips task_logs for courses from previous semesters
+    for task in tasks:
+        # this skips task_logs for courses from previous semesters
+        if task.moodle_file_metadata is None:
             continue
 
-        if isinstance(key, FileKey):
-            update_file_metadata(task_log, file_cache)
-        elif isinstance(key, UnitKey):
-            update_unit_metadata(task_log)
-        elif isinstance(key, CourseKey):
-            update_course_metadata(task_log)
-        else:
-            msg = f"Cannot handle key of type {type(key)}."
-            raise TypeError(msg)
+        update_metadata(task.key, task, file_cache)
 
-    update_drafts(task_logs)
-    publish_created_drafts(task_logs)
+    update_drafts(tasks)
+    publish_created_drafts(tasks)

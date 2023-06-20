@@ -8,22 +8,31 @@
 """Convert Moodle metadata format into LOM format."""
 
 from datetime import datetime
+from functools import singledispatch
 from html import unescape
 
 from invenio_records_lom.utils import LOMMetadata
 
-from .types import FileCache, TaskLog
+from .types import CourseKey, FileCache, FileKey, Key, Task, UnitKey
 
 
-def update_course_metadata(course_tasklog: TaskLog) -> None:
-    """Update `course_tasklog.json`.
+@singledispatch
+def update_metadata(key: Key, task: Task, **kwargs: dict) -> None:  # noqa: ARG001
+    """Update Metadata."""
+    msg = f"Cannot handle key of type {key}."
+    raise TypeError(msg)
 
-    The update uses `course_tasklog.moodle_file_json` and
-    `course_tasklog.moodle_course_json`.
+
+@update_metadata.register
+def _(key: CourseKey, course_task: Task, **kwargs: dict) -> None:  # noqa: ARG001
+    """Create metadata of the course.
+
+    Update the metadata of the `course_task` by using the metadata from
+    `moodle_file_metadata` and `moodle_course_metadata` metadata.
     """
-    metadata = LOMMetadata(course_tasklog.json or {}, overwritable=True)
-    file_json = course_tasklog.moodle_file_json
-    course_json = course_tasklog.moodle_course_json
+    metadata = LOMMetadata(course_task.metadata or {}, overwritable=True)
+    file_json = course_task.moodle_file_metadata
+    course_json = course_task.moodle_course_metadata
 
     # convert courseid
     courseid = course_json["courseid"]
@@ -45,26 +54,27 @@ def update_course_metadata(course_tasklog: TaskLog) -> None:
     context = file_json["context"]
     metadata.append_context(context)
 
-    course_tasklog.json = metadata.json
+    course_task.set_metadata(metadata)
 
 
-def update_unit_metadata(unit_tasklog: TaskLog) -> None:
-    """Update `unit_tasklog.json`.
+@update_metadata.register
+def _(key: UnitKey, unit_task: Task, **kwargs: dict) -> None:  # noqa: ARG001
+    """Update `unit_task.metadata`.
 
-    The update uses `unit_tasklog.moodle_file_json` and
-    `unit_tasklog.moodle_course_json`.
+    The update uses `unit_tasklog.moodle_file_metadata` and
+    `unit_tasklog.moodle_course_metadata`.
     """
-    metadata = LOMMetadata(unit_tasklog.json or {}, overwritable=True)
-    file_json = unit_tasklog.moodle_file_json
-    course_json = unit_tasklog.moodle_course_json
+    metadata = LOMMetadata(unit_task.metadata or {}, overwritable=True)
+    file_json = unit_task.moodle_file_metadata
+    course_json = unit_task.moodle_course_metadata
 
     # multi-use input data
     year = file_json["year"]
     semester = file_json["semester"]
 
     # convert title
-    coursename = course_json["coursename"]
-    title = f"{coursename} ({semester} {year})"
+    course_name = course_json["coursename"]
+    title = f"{course_name} ({semester} {year})"
     metadata.set_title(title, language_code="x-none")
 
     # convert language
@@ -99,14 +109,14 @@ def update_unit_metadata(unit_tasklog: TaskLog) -> None:
     objective = unescape(course_json["objective"])
     metadata.append_educational_description(objective, language_code="x-none")
 
-    unit_tasklog.json = metadata.json
+    unit_task.set_metadata(metadata)
 
 
-# pylint: disable-next=too-many-locals
-def update_file_metadata(file_tasklog: TaskLog, file_cache: FileCache) -> None:
-    """Update `file_tasklog.json` using `file_tasklog.moodle_file_json`."""
-    metadata = LOMMetadata(file_tasklog.json or {}, overwritable=True)
-    file_json = file_tasklog.moodle_file_json
+@update_metadata.register
+def _(key: FileKey, file_task: Task, file_cache: FileCache) -> None:  # noqa: ARG001
+    """Update `file_task.metadata` using `file_tasklog.moodle_file_metadata`."""
+    metadata = LOMMetadata(file_task.metadata or {}, overwritable=True)
+    file_json = file_task.moodle_file_metadata
 
     # multi-use input data
     language = file_json["language"]
@@ -126,9 +136,8 @@ def update_file_metadata(file_tasklog: TaskLog, file_cache: FileCache) -> None:
         metadata.append_description(abstract, language_code=language)
 
     # convert tags
-    for tag in file_json["tags"]:
-        if tag:
-            metadata.append_keyword(tag, language_code=language)
+    for tag in filter(bool, file_json["tags"]):
+        metadata.append_keyword(tag, language_code=language)
 
     # convert persons
     for person in file_json["persons"]:
@@ -136,18 +145,16 @@ def update_file_metadata(file_tasklog: TaskLog, file_cache: FileCache) -> None:
         metadata.append_contribute(name, role=person["role"])
 
     # convert timereleased
-    timereleased = file_json["timereleased"]
-    datetime_obj = datetime.fromtimestamp(int(timereleased))
-    datetime_isoformat = str(datetime_obj.date().isoformat())
+    time_released = int(file_json["timereleased"])
+    datetime_obj = datetime.fromtimestamp(time_released)
+    datetime_isoformat = datetime_obj.date().isoformat()
     metadata.set_datetime(datetime_isoformat)
 
     # convert mimetype
-    mimetype = file_json["mimetype"]
-    metadata.append_format(mimetype)
+    metadata.append_format(file_json["mimetype"])
 
     # convert filesize
-    filesize = file_json["filesize"]
-    metadata.set_size(filesize)
+    metadata.set_size(file_json["filesize"])
 
     # convert resourcetype
     # https://skohub.io/dini-ag-kim/hcrt/heads/master/w3id.org/kim/hcrt/slide.en.html
@@ -170,6 +177,7 @@ def update_file_metadata(file_tasklog: TaskLog, file_cache: FileCache) -> None:
         for classification in file_json["classification"]
         for value in classification["values"]
     ]
+
     # reorder to ['1234', '123', '2345', '234', '2']
     oefos_ids.sort(key=lambda id_: id_.ljust(6, chr(255)))
 
@@ -178,4 +186,4 @@ def update_file_metadata(file_tasklog: TaskLog, file_cache: FileCache) -> None:
         metadata.append_oefos_id(id_)
         metadata.append_oefos_id(id_, "en")
 
-    file_tasklog.json = metadata.json
+    file_task.set_metadata(metadata)

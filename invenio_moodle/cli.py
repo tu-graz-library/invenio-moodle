@@ -26,10 +26,3 @@ def moodle() -> None:
 def import_by_endpoint(endpoint: str = None) -> None:
     """Fetch data from MOODLE_FETCH_URL and insert it into the database."""
     fetch_moodle(endpoint)
-
-
-@moodle.command()
-@click.option("--input-file", type=JSON(), required=True)
-@with_appcontext
-def import_by_file(input_file: dict) -> None:
-    """Import oer by file."""

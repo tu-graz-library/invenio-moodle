@@ -12,7 +12,8 @@ from click_params import URL
 from flask.cli import with_appcontext
 
 from .api import fetch_moodle
-from .click_param_types import JSON
+
+# from .click_param_types import JSON
 
 
 @click.group()

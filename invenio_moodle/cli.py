@@ -13,8 +13,6 @@ from flask.cli import with_appcontext
 
 from .api import fetch_moodle
 
-# from .click_param_types import JSON
-
 
 @click.group()
 def moodle() -> None:

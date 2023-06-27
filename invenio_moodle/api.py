@@ -23,7 +23,7 @@ from .utils import (
 
 if TYPE_CHECKING:
     from flask_principal import Identity
-    from invenio_records_lom import LOMRecordService
+    from invenio_records_lom.utils import LOMRecordService
 
 
 def fetch_moodle(moodle_fetch_url: str) -> None:

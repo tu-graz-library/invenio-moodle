@@ -73,19 +73,6 @@ def cache_file(url: str) -> FileCacheInfo:
         return save_file_locally(response, directory)
 
 
-# def build_file_cache(temp_dir: Path, moodle_records: list[dict]) -> FileCache:
-#     """Build file cache.
-
-#     download unprovided urls into `temp_dir`, build `file_cache`
-#     """
-#     urls = [jsn["fileurl"] for jsn in moodle_records]
-#     file_cache: FileCache = cache_files(
-#         directory=temp_dir,
-#         urls=urls,
-#     )
-#     return file_cache
-
-
 def add_file_to_draft(
     record: FileRecord,
     draft_files: FileService,

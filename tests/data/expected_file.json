@@ -1,0 +1,137 @@
+{
+  "metadata": {
+    "rights": {
+      "copyrightandotherrestrictions": {
+        "source": {"langstring": {"#text": "LOMv1.0", "lang": "x-none"}},
+        "value": {"langstring": {"#text": "yes", "lang": "x-none"}}
+      },
+      "url": "https://creativecommons.org/licenses/by/4.0/",
+      "description": {
+        "langstring": {
+          "#text": "https://creativecommons.org/licenses/by/4.0/",
+          "lang": "x-t-cc-url"
+        }
+      }
+    },
+    "general": {
+      "language": ["de"],
+      "title": {
+        "langstring": {
+          "#text": "Einsatz von Medien im Schulunterricht",
+          "lang": "de"
+        }
+      },
+      "keyword": [
+        {
+          "langstring": {
+            "#text": "Technology Enhanced Learning",
+            "lang": "de"
+          }
+        },
+        {"langstring": {"#text": "Bildungsinformatik", "lang": "de"}}
+      ]
+    },
+    "lifecycle": {
+      "contribute": [
+        {
+          "role": {
+            "source": {
+              "langstring": {"#text": "LOMv1.0", "lang": "x-none"}
+            },
+            "value": {
+              "langstring": {"#text": "Author", "lang": "x-none"}
+            }
+          },
+          "entity": ["Martin Ebner"]
+        }
+      ],
+      "datetime": "2023-02-18"
+    },
+    "technical": {
+      "format": ["application/pdf"],
+      "size": "28833103"
+    },
+    "classification": [
+      {
+        "purpose": {
+          "source": {
+            "langstring": {"#text": "LOMv1.0", "lang": "x-none"}
+          },
+          "value": {
+            "langstring": {"#text": "discipline", "lang": "x-none"}
+          }
+        },
+        "taxonpath": [
+          {
+            "source": {
+              "langstring": {
+                "#text": "https://w3id.org/oerbase/vocabs/oefos2012",
+                "lang": "x-none"
+              }
+            },
+            "taxon": [
+              {
+                "id": "https://w3id.org/oerbase/vocabs/oefos2012/5",
+                "entry": {
+                  "langstring": {"#text": "SOZIALWISSENSCHAFTEN"}
+                }
+              },
+              {
+                "id": "https://w3id.org/oerbase/vocabs/oefos2012/503",
+                "entry": {
+                  "langstring": {
+                    "#text": "Erziehungswissenschaften"
+                  }
+                }
+              },
+              {
+                "id": "https://w3id.org/oerbase/vocabs/oefos2012/5030",
+                "entry": {
+                  "langstring": {
+                    "#text": "Erziehungswissenschaften"
+                  }
+                }
+              },
+              {
+                "id": "https://w3id.org/oerbase/vocabs/oefos2012/503008",
+                "entry": {"langstring": {"#text": "E-Learning"}}
+              }
+            ]
+          },
+          {
+            "source": {
+              "langstring": {
+                "#text": "https://w3id.org/oerbase/vocabs/oefos2012",
+                "lang": "x-none"
+              }
+            },
+            "taxon": [
+              {
+                "id": "https://w3id.org/oerbase/vocabs/oefos2012/5",
+                "entry": {
+                  "langstring": {"#text": "SOCIAL SCIENCES"}
+                }
+              },
+              {
+                "id": "https://w3id.org/oerbase/vocabs/oefos2012/503",
+                "entry": {
+                  "langstring": {"#text": "Educational Sciences"}
+                }
+              },
+              {
+                "id": "https://w3id.org/oerbase/vocabs/oefos2012/5030",
+                "entry": {
+                  "langstring": {"#text": "Educational Sciences"}
+                }
+              },
+              {
+                "id": "https://w3id.org/oerbase/vocabs/oefos2012/503008",
+                "entry": {"langstring": {"#text": "E-learning"}}
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

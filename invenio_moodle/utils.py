@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 
 from invenio_pidstore.errors import PIDDoesNotExistError
 from invenio_pidstore.models import PersistentIdentifier
-from invenio_records_lom import LOMMetadata
+from invenio_records_lom.utils import LOMMetadata
 
 from .convert import (
     convert_course_metadata,
@@ -27,7 +27,6 @@ from .types import (
     CourseRecord,
     FileKey,
     FileRecord,
-    Task,
     UnitKey,
     UnitRecord,
 )
@@ -90,7 +89,7 @@ def get_from_database_or_create(
     key: Key,
     record_service: LOMRecordService,
     identity: Identity,
-) -> Task:
+) -> BaseRecord:
     """Fetch moodle-result corresponding to `key`, create database-entry if none exists.
 
     :param Key key: the key which to attempt fetching from pidstore
@@ -139,7 +138,7 @@ def get_from_database_or_create(
     elif isinstance(key, CourseKey):
         type_of_record = CourseRecord
     else:
-        type_of_record = Task
+        type_of_record = BaseRecord
 
     return type_of_record(
         key=key,

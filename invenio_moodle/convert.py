@@ -30,15 +30,24 @@ class Visitor:
         """Traverse first level elements of dictionary and extract attributes."""
 
         def func_not_found(*_: dict, **__: dict) -> None:
-            msg = f"NO visitor node: '{attribute}'"
-            raise ValueError(msg)
+            """Ignore keys that are not converted."""
 
         visit_function = getattr(self, f"visit_{attribute}", func_not_found)
-        return visit_function(value, record)
+        visit_function(value, record)
 
 
 class MoodleCourseToLOMCourse(Visitor):
     """Convert Moodle course type to LOM course resource type."""
+
+    def visit(
+        self,
+        moodle_course_metadata: dict,
+        moodle_file_metadata: dict,
+        record: LOMMetadata,
+    ) -> None:
+        """Visit."""
+        super().visit(moodle_course_metadata, record)
+        super().visit(moodle_file_metadata, record)
 
     def visit_courseid(self, value: str, record: LOMMetadata) -> None:
         """Visit courseid."""
@@ -64,9 +73,15 @@ class MoodleCourseToLOMCourse(Visitor):
 class MoodleUnitToLOMUnit(Visitor):
     """Moodle unit to lom unit."""
 
-    def visit(self, value: str, record: LOMMetadata) -> None:
+    def visit(
+        self,
+        moodle_course_metadata: dict,
+        moodle_file_metadata: dict,
+        record: LOMMetadata,
+    ) -> None:
         """Visit."""
-        super().visit(value, record)
+        super().visit(moodle_course_metadata, record)
+        super().visit(moodle_file_metadata, record)
 
         title = f"{self.course_name} ({self.semester} {self.year})"
         record.set_title(title, language_code="x-none")
@@ -94,7 +109,7 @@ class MoodleUnitToLOMUnit(Visitor):
 
     def visit_description(self, value: str, record: LOMMetadata) -> None:
         """Visit description."""
-        record.append_description(value, language_code="x-none")
+        record.append_description(unescape(value), language_code="x-none")
 
     def visit_lecturer(self, value: str, record: LOMMetadata) -> None:
         """Visit lecturer."""
@@ -113,7 +128,7 @@ class MoodleUnitToLOMUnit(Visitor):
 class MoodleFileToLOMFile(Visitor):
     """Moodle file to lom file."""
 
-    def visit(self, value: str, record: LOMMetadata) -> None:
+    def visit(self, value: dict, record: LOMMetadata) -> None:
         """Visit."""
         super().visit(value, record)
 
@@ -150,7 +165,7 @@ class MoodleFileToLOMFile(Visitor):
 
     def visit_timereleased(self, value: str, record: LOMMetadata) -> None:
         """Visit timereleased."""
-        datetime_obj = datetime.fromtimestamp(value)
+        datetime_obj = datetime.fromtimestamp(int(value))
         datetime_isoformat = datetime_obj.date().isoformat()
         record.set_datetime(datetime_isoformat)
 
@@ -205,9 +220,8 @@ def convert_course_metadata(
     """
     metadata = LOMMetadata(overwritable=True)
 
-    visitor = MoodleFileToLOMFile()
-    visitor.visit(moodle_file_metadata, metadata)
-    visitor.visit(moodle_course_metadata, metadata)
+    visitor = MoodleCourseToLOMCourse()
+    visitor.visit(moodle_course_metadata, moodle_file_metadata, metadata)
 
     return metadata
 
@@ -219,9 +233,8 @@ def convert_unit_metadata(
     """Create metadata of an unit."""
     metadata = LOMMetadata(overwritable=True)
 
-    visitor = MoodleFileToLOMFile()
-    visitor.visit(moodle_file_metadata, metadata)
-    visitor.visit(moodle_course_metadata, metadata)
+    visitor = MoodleUnitToLOMUnit()
+    visitor.visit(moodle_course_metadata, moodle_file_metadata, metadata)
 
     return metadata
 

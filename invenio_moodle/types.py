@@ -14,7 +14,6 @@ from functools import singledispatchmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
     from pathlib import Path
 
     from invenio_records_lom import LOMMetadata
@@ -86,14 +85,13 @@ class FileKey(Key):
     def _(
         self,
         moodle_file_metadata: dict,
-        file_cache: dict[str, FileCacheInfo],
-    ) -> FileKey:
+    ) -> None:
         """Create `cls` via info from moodle-json and file-cache."""
         url = moodle_file_metadata["fileurl"]
         year = moodle_file_metadata["year"]
         semester = moodle_file_metadata["semester"]
-        hash_md5 = file_cache[url].hash_md5
-        return self.__init__(url=url, year=year, semester=semester, hash_md5=hash_md5)
+        hash_md5 = moodle_file_metadata["contenthash"]
+        self.__init__(url, year, semester, hash_md5)
 
     def __str__(self) -> str:
         """Get string-representation."""
@@ -112,16 +110,16 @@ class FileKey(Key):
 class UnitKey(Key):
     """Key for units as to disambiguate it from keys for files and courses."""
 
-    courseid: str
+    course_id: str
     year: str
     semester: str
 
     resource_type = "unit"
 
     @singledispatchmethod
-    def __init__(self, courseid: str, year: str, semester: str) -> None:
+    def __init__(self, course_id: str, year: str, semester: str) -> None:
         """Construct UnitKey."""
-        object.__setattr__(self, "courseid", courseid)
+        object.__setattr__(self, "course_id", course_id)
         object.__setattr__(self, "year", year)
         object.__setattr__(self, "semester", semester)
 
@@ -131,11 +129,11 @@ class UnitKey(Key):
         course_id = moodle_course_json["courseid"]
         year = moodle_file_json["year"]
         semester = moodle_file_json["semester"]
-        return self.__init__(course_id=course_id, year=year, semester=semester)
+        self.__init__(course_id, year, semester)
 
     def __str__(self) -> str:
         """Get string-representation."""
-        course_id = f"courseid={self.course_id}"
+        course_id = f"course_id={self.course_id}"
         year = f"year={self.year}"
         semester = f"semester={self.semester}"
         return f"UnitKey({course_id}, {year}, {semester})"
@@ -162,11 +160,11 @@ class CourseKey(Key):
     def _(self, moodle_course_metadata: dict) -> None:
         """Create `cls` via info from moodle-json."""
         course_id = moodle_course_metadata["courseid"]
-        return self.__init__(course_id=course_id)
+        self.__init__(course_id)
 
     def __str__(self) -> str:
         """Get string-representation."""
-        course_id = f"courseid={self.course_id}"
+        course_id = f"course_id={self.course_id}"
         return f"CourseKey({course_id})"
 
     def get_moodle_pid_value(self) -> str:
@@ -180,7 +178,6 @@ class BaseRecord:
 
     key: Key
     metadata: LOMMetadata
-    links: Links
 
     @property
     def pid(self) -> str:
@@ -208,11 +205,10 @@ class FileRecord(BaseRecord):
 
     file_url: str
 
-    def construct_up_links(self, records: BaseRecord) -> None:
+    def construct_up_links(self, records: list[BaseRecord]) -> None:
         """Construct up links."""
         for record in records:
-            self.metadata.append_link(Link(self.pid, "ispartof", record.pid))
-            self.metadata.append_link(Link(record.pid, "haspart", self.pid))
+            self.metadata.append_relation(record.pid, "ispartof")
 
     def construct_down_links(self, _: BaseRecord) -> None:
         """Construct down links."""
@@ -224,134 +220,27 @@ class FileRecord(BaseRecord):
 class UnitRecord(BaseRecord):
     """Unit."""
 
-    def construct_up_links(self, records: BaseRecord) -> None:
+    def construct_up_links(self, records: list[BaseRecord]) -> None:
         """Construct up links."""
         for record in records:
-            self.metadata.append_link(Link(self.pid, "ispartof", record.pid))
-            self.metadata.append_link(Link(record.pid, "haspart", self.pid))
+            self.metadata.append_relation(record.pid, "ispartof")
 
-    def construct_down_links(self, records: BaseRecord) -> None:
+    def construct_down_links(self, records: list[BaseRecord]) -> None:
         """Construct down links."""
         for record in records:
-            self.metadata.append_link(Link(self.pid, "haspart", record.pid))
-            self.metadata.append_link(Link(record.pid, "ispartof", self.pid))
+            self.metadata.append_relation(record.pid, "haspart")
 
 
 @dataclass
 class CourseRecord(BaseRecord):
     """Course."""
 
-    def construct_up_links(self, _: BaseRecord) -> None:
+    def construct_up_links(self, _: list[BaseRecord]) -> None:
         """Construct up links."""
         msg = "There exists no up upper course."
         raise RuntimeError(msg)
 
-    def construct_down_links(self, records: BaseRecord) -> None:
+    def construct_down_links(self, records: list[BaseRecord]) -> None:
         """Construct down links."""
         for record in records:
-            self.metadata.append_link(Link(self.pid, "haspart", record.pid))
-            self.metadata.append_link(Link(record.pid, "ispartof", self.pid))
-
-
-# @dataclass
-# class Task:
-#     """Stores data."""
-
-#     key: Key
-#     pid: str
-#     previous_metadata: dict
-#     moodle_file_metadata: dict = None
-#     moodle_course_metadata: dict = None
-
-#     def set_moodle_file_metadata(self, metadata: dict) -> None:
-#         """Set moodle file metadata."""
-#         self.moodle_file_metadata = metadata
-
-#     def set_moodle_course_metadata(self, metadata: dict) -> None:
-#         """Set moodle course metadata."""
-#         self.moodle_course_metadata = metadata
-
-
-# @dataclass
-# class FileTask(Task):
-#     """Define file task."""
-
-#     key: FileKey
-#     unit_tasks: Tasks
-
-#     def add_unit_task(self, **tasks: list[UnitTask]) -> None:
-#         """Add unit tasks."""
-#         self.unit_tasks.append(**tasks)
-
-
-# @dataclass
-# class UnitTask(Task):
-#     """Define unit task."""
-
-#     key: UnitKey
-#     file_tasks: Tasks
-#     course_tasks: Tasks
-
-#     def add_file_task(self, **tasks: list[UnitTask]) -> None:
-#         """Add unit tasks."""
-#         self.file_tasks.append(**tasks)
-
-#     def add_course_task(self, **tasks: list[UnitTask]) -> None:
-#         """Add unit tasks."""
-#         self.course_tasks.append(**tasks)
-
-
-# @dataclass
-# class CourseTask(Task):
-#     """Define course task."""
-
-#     key: CourseKey
-#     unit_tasks: Tasks
-
-#     def add_unit_task(self, **tasks: list[UnitTask]) -> None:
-#         """Add unit tasks."""
-#         self.unit_tasks.append(**tasks)
-
-
-# class Tasks(list):
-#     """List of tasks."""
-
-#     def __getitem__(self, key: Key) -> Task | None:
-#         """Return the task by key."""
-#         for task in self:
-#             if task.key == key:
-#                 return task
-#         return None
-
-#     def __contains__(self, task: Task) -> bool:
-#         """Return true if task exists already."""
-#         return any(task.key == t.key for t in self)
-
-#     def filter_by(self, key: Key) -> Generator[Task, None, None]:
-#         """Filter tasks by func."""
-#         for task in self:
-#             if isinstance(task.key, key):
-#                 yield task
-
-
-@dataclass(frozen=True)
-class Link:
-    """Represents a link between records."""
-
-    source: Key
-    kind: str
-    target: str
-
-
-# @dataclass
-# class Links(list[Link]):
-#     """Defines the Links type."""
-
-#     def __init__(self, *args: list[Link]) -> None:
-#         """Construct Links."""
-#         super().__init__(arg for arg in args)
-
-
-# @dataclass
-# class FileCache(dict[str, FileCacheInfo]):
-#     """Defines the FileCache type."""
+            self.metadata.append_relation(record.pid, "haspart")

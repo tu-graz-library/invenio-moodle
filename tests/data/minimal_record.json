@@ -1,0 +1,69 @@
+{
+  "title": "Einsatz von Medien im Schulunterricht",
+  "contenthash": "f234b1feaf60f1fb63ba5cb4be24bd7a60d806e1",
+  "fileurl": "https://path/to/file",
+  "abstract": "",
+  "license": {
+    "shortname": "CC BY 4.0",
+    "fullname": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+    "source": "https://creativecommons.org/licenses/by/4.0/"
+  },
+  "context": "Higher Education",
+  "resourcetype": "No selection",
+  "language": "de",
+  "persons": [
+    {
+      "role": "Author",
+      "lastname": "Ebner",
+      "firstname": "Martin"
+    }
+  ],
+  "tags": [
+    "Technology Enhanced Learning",
+    "Bildungsinformatik"
+  ],
+  "mimetype": "application/pdf",
+  "filesize": "28833103",
+  "filecreationtime": "1615214877",
+  "timereleased": "1676710803",
+  "classification": [
+    {
+      "type": "oefos",
+      "url": "https://www.data.gv.at/katalog/dataset/stat_ofos-2012",
+      "values": [
+        {
+          "identifier": "503008",
+          "name": "E-Learning"
+        }
+      ]
+    }
+  ],
+  "courses": [
+    {
+      "identifier": "INR02412UF",
+      "courseid": "240587",
+      "sourceid": "221923",
+      "coursename": "AK  Technology Enhanced Learning",
+      "structure": "Seminar (SE)",
+      "description": "Im Rahmen dieser Lehrveranstaltung werden vertiefende Kapitel aus dem Bereich Technology Enhanced Learning (e-Learning) vorgestellt. Die Inhalte richten sich stark an den Kapiteln die im vorangegangenen Wintersemester im Seminar 'Technology Enhanced Learning' unterrichtet wurden und sollen diese in sinnvoller Weise erweitern/ergänzen. Offene Themenpunkte sind Teil dieser Lehrveranstaltung.",
+      "objective": "Vertiefte Kenntnisse im Bereich technologiegestütztes Lernen und Lehren mit dem Ziel diese auch in der Praxis einsetzen zu können. Einsatz von Medien im Unterricht und deren kritische Reflexion",
+      "organisation": "Institute of Interactive Systems and Data Science",
+      "courselanguage": "de",
+      "lecturer": "Martin Ebner"
+    },
+    {
+      "identifier": "moodlecourse-475",
+      "courseid": "0",
+      "sourceid": "0",
+      "coursename": "[INR02412UF] AK  Technology Enhanced Learning (SS)",
+      "structure": "",
+      "description": "",
+      "objective": "",
+      "organisation": "",
+      "courselanguage": "",
+      "lecturer": "Martin Ebner"
+    }
+  ],
+  "semester": "SS",
+  "year": "2023"
+}

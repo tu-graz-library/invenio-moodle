@@ -1,0 +1,42 @@
+{
+  "metadata": {
+    "general": {
+      "identifier": [
+        {
+          "catalog": "teachcenter-course-id",
+          "entry": {
+            "langstring": {"#text": "INR02412UF", "lang": "x-none"}
+          }
+        },
+        {
+          "catalog": "moodle-id",
+          "entry": {"langstring": {"#text": "240587", "lang": "x-none"}}
+        }
+      ],
+      "title": {
+        "langstring": {
+          "#text": "AK  Technology Enhanced Learning",
+          "lang": "x-none"
+        }
+      },
+      "keyword": [
+        {"langstring": {"#text": "Seminar (SE)", "lang": "x-none"}}
+      ]
+    },
+    "educational": {
+      "context": [
+        {
+          "source": {
+            "langstring": {"#text": "LOMv1.0", "lang": "x-none"}
+          },
+          "value": {
+            "langstring": {
+              "#text": "Higher Education",
+              "lang": "x-none"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

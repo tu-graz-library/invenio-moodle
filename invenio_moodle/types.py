@@ -102,74 +102,31 @@ class FileKey(Key):
         return f"FileKey({url}, {year}, {semester}, {hash_md5})"
 
     def get_moodle_pid_value(self) -> str:
-        """Get hash."""
+        """Get moodle pid value."""
         return self.hash_md5
 
 
 @dataclass(frozen=True)
-class UnitKey(Key):
-    """Key for units as to disambiguate it from keys for files and courses."""
+class LinkKey(Key):
+    """Key for links only records."""
 
-    course_id: str
-    year: str
-    semester: str
+    url: str
 
-    resource_type = "unit"
+    resource_type = "link"
 
     @singledispatchmethod
-    def __init__(self, course_id: str, year: str, semester: str) -> None:
-        """Construct UnitKey."""
-        object.__setattr__(self, "course_id", course_id)
-        object.__setattr__(self, "year", year)
-        object.__setattr__(self, "semester", semester)
-
-    @__init__.register
-    def _(self, moodle_file_json: dict, moodle_course_json: dict) -> None:
-        """Create `cls` via info from moodle-json."""
-        course_id = moodle_course_json["courseid"]
-        year = moodle_file_json["year"]
-        semester = moodle_file_json["semester"]
-        self.__init__(course_id, year, semester)
+    def __init__(self, url: str) -> None:
+        """Construct."""
+        object.__setattr__(self, "url", url)
 
     def __str__(self) -> str:
         """Get string-representation."""
-        course_id = f"course_id={self.course_id}"
-        year = f"year={self.year}"
-        semester = f"semester={self.semester}"
-        return f"UnitKey({course_id}, {year}, {semester})"
+        url = f"url={self.url}"
+        return f"LinkKey({url})"
 
     def get_moodle_pid_value(self) -> str:
-        """Get hash."""
-        return f"{self.course_id}-{self.year}-{self.semester}"
-
-
-@dataclass(frozen=True)
-class CourseKey(Key):
-    """Key for courses as to disambiguate it from keys for files and units."""
-
-    course_id: str
-
-    resource_type = "course"
-
-    @singledispatchmethod
-    def __init__(self, course_id: str) -> None:
-        """Construct CourseKey."""
-        object.__setattr__(self, "course_id", course_id)
-
-    @__init__.register
-    def _(self, moodle_course_metadata: dict) -> None:
-        """Create `cls` via info from moodle-json."""
-        course_id = moodle_course_metadata["courseid"]
-        self.__init__(course_id)
-
-    def __str__(self) -> str:
-        """Get string-representation."""
-        course_id = f"course_id={self.course_id}"
-        return f"CourseKey({course_id})"
-
-    def get_moodle_pid_value(self) -> str:
-        """Get hash."""
-        return self.course_id
+        """Get moodle pid value."""
+        return self.url
 
 
 @dataclass
@@ -184,20 +141,6 @@ class BaseRecord:
         """Get pid."""
         return self.key.get_moodle_pid_value()
 
-    @abstractmethod
-    def construct_up_links(self, records: BaseRecord) -> None:
-        """Construct up links.
-
-        Up describes the direction from files -> unit -> course
-        """
-
-    @abstractmethod
-    def construct_down_links(self, records: BaseRecord) -> None:
-        """Construct down links.
-
-        Down describes the direction from course -> unit -> files
-        """
-
 
 @dataclass
 class FileRecord(BaseRecord):
@@ -205,42 +148,9 @@ class FileRecord(BaseRecord):
 
     file_url: str
 
-    def construct_up_links(self, records: list[BaseRecord]) -> None:
-        """Construct up links."""
-        for record in records:
-            self.metadata.append_relation(record.pid, "ispartof")
-
-    def construct_down_links(self, _: BaseRecord) -> None:
-        """Construct down links."""
-        msg = "There exists no down under file."
-        raise RuntimeError(msg)
-
 
 @dataclass
-class UnitRecord(BaseRecord):
-    """Unit."""
+class LinkRecord(BaseRecord):
+    """Link."""
 
-    def construct_up_links(self, records: list[BaseRecord]) -> None:
-        """Construct up links."""
-        for record in records:
-            self.metadata.append_relation(record.pid, "ispartof")
-
-    def construct_down_links(self, records: list[BaseRecord]) -> None:
-        """Construct down links."""
-        for record in records:
-            self.metadata.append_relation(record.pid, "haspart")
-
-
-@dataclass
-class CourseRecord(BaseRecord):
-    """Course."""
-
-    def construct_up_links(self, _: list[BaseRecord]) -> None:
-        """Construct up links."""
-        msg = "There exists no up upper course."
-        raise RuntimeError(msg)
-
-    def construct_down_links(self, records: list[BaseRecord]) -> None:
-        """Construct down links."""
-        for record in records:
-            self.metadata.append_relation(record.pid, "haspart")
+    url: str

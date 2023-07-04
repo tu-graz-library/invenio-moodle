@@ -45,29 +45,9 @@ def minimal_record() -> dict:
 
 
 @pytest.fixture()
-def expected_course() -> dict:
-    """Fixture expected_course."""
-    filename = Path("data/expected_course.json")
-    directory = Path(__file__).parent
-    filepath = directory / filename
-    with filepath.open("r") as fp:
-        return load(fp)
-
-
-@pytest.fixture()
-def expected_unit() -> None:
+def expected_lom_metadata() -> None:
     """Expectd unit."""
-    filename = Path("data/expected_unit.json")
-    directory = Path(__file__).parent
-    filepath = directory / filename
-    with filepath.open("r") as fp:
-        return load(fp)
-
-
-@pytest.fixture()
-def expected_file() -> None:
-    """Expectd unit."""
-    filename = Path("data/expected_file.json")
+    filename = Path("data/lom_metadata.json")
     directory = Path(__file__).parent
     filepath = directory / filename
     with filepath.open("r") as fp:

@@ -10,7 +10,7 @@
 from datetime import datetime
 from html import unescape
 
-from invenio_records_lom.utils import LOMMetadata
+from invenio_records_lom.utils import LOMCourseMetadata, LOMMetadata
 
 
 class Visitor:
@@ -36,76 +36,37 @@ class Visitor:
         visit_function(value, record)
 
 
-class MoodleCourseToLOMCourse(Visitor):
-    """Convert Moodle course type to LOM course resource type."""
+class CourseToLOM(Visitor):
+    """Course to LOM."""
 
-    def visit(
-        self,
-        moodle_course_metadata: dict,
-        moodle_file_metadata: dict,
-        record: LOMMetadata,
-    ) -> None:
-        """Visit."""
-        super().visit(moodle_course_metadata, record)
-        super().visit(moodle_file_metadata, record)
-
-    def visit_courseid(self, value: str, record: LOMMetadata) -> None:
+    def visit_courseid(self, value: str, record: LOMCourseMetadata) -> None:
         """Visit courseid."""
-        record.append_identifier(value, catalog="moodle-id")
+        record.append_identifier(value, catalog="tugrazonline-id")
 
-    def visit_identifier(self, value: str, record: LOMMetadata) -> None:
+    def visit_identifier(self, value: str, record: LOMCourseMetadata) -> None:
         """Visit identifier."""
         record.append_identifier(value, catalog="teachcenter-course-id")
 
-    def visit_coursename(self, value: str, record: LOMMetadata) -> None:
+    def visit_coursename(self, value: str, record: LOMCourseMetadata) -> None:
         """Visit coursename."""
+        self.course_name = value
         record.set_title(value, language_code="x-none")
 
-    def visit_structure(self, value: str, record: LOMMetadata) -> None:
+    def visit_courselanguage(self, value: str, record: LOMCourseMetadata) -> None:
+        """Visit courselanguage."""
+        record.append_language(value)
+
+    def visit_structure(self, value: str, record: LOMCourseMetadata) -> None:
         """Visit structure."""
         record.append_keyword(value, language_code="x-none")
 
-    def visit_context(self, value: str, record: LOMMetadata) -> None:
+    def visit_context(self, value: str, record: LOMCourseMetadata) -> None:
         """Visit context."""
         record.append_context(value)
 
-
-class MoodleUnitToLOMUnit(Visitor):
-    """Moodle unit to lom unit."""
-
-    def visit(
-        self,
-        moodle_course_metadata: dict,
-        moodle_file_metadata: dict,
-        record: LOMMetadata,
-    ) -> None:
-        """Visit."""
-        super().visit(moodle_course_metadata, record)
-        super().visit(moodle_file_metadata, record)
-
-        title = f"{self.course_name} ({self.semester} {self.year})"
-        record.set_title(title, language_code="x-none")
-
-        version = f"{self.semester} {self.year}"
-        record.set_version(version, datetime=self.year)
-
-    def visit_year(self, value: str, record: LOMMetadata) -> None:
-        """Visit year."""
-        self.year = value
-        record.set_datetime(value)
-
-    def visit_semester(self, value: str, record: LOMMetadata) -> None:
-        """Visit semester."""
-        self.semester = value
-        record.append_keyword(value, language_code="x-none")
-
-    def visit_coursename(self, value: str, _: LOMMetadata) -> None:
-        """Visit coursename."""
-        self.course_name = value
-
-    def visit_courselanguage(self, value: str, record: LOMMetadata) -> None:
-        """Visit courselanguage."""
-        record.append_language(value)
+    def visit_objective(self, value: str, record: LOMMetadata) -> None:
+        """Visit objective."""
+        record.append_description(value, language_code="x-none")
 
     def visit_description(self, value: str, record: LOMMetadata) -> None:
         """Visit description."""
@@ -120,25 +81,48 @@ class MoodleUnitToLOMUnit(Visitor):
         """Visit organisation."""
         record.append_contribute(value, role="Unknown")
 
-    def visit_objective(self, value: str, record: LOMMetadata) -> None:
-        """Visit objective."""
-        record.append_educational_description(value, language_code="x-none")
 
-
-class MoodleFileToLOMFile(Visitor):
+class MoodleToLOM(Visitor):
     """Moodle file to lom file."""
 
     def visit(self, value: dict, record: LOMMetadata) -> None:
         """Visit."""
+        self.courses = []
+
         super().visit(value, record)
 
         record.set_title(self.title, language_code=self.language)
+
+        version = f"{self.semester} {self.year}"
+        record.set_version(version, datetime=self.year)
 
         for tag in filter(bool, self.tags):
             record.append_keyword(tag, language_code=self.language)
 
         if abstract := unescape(self.abstract):
             record.append_description(abstract, language_code=self.language)
+
+        for course in self.courses:
+            course.set_version(version, datetime=self.year)
+            record.append_course(course.json)
+
+    def visit_courses(self, value: list, _: LOMMetadata) -> None:
+        """Visit courses."""
+        for course in value:
+            lom_course_record = LOMCourseMetadata()
+            visitor = CourseToLOM()
+            visitor.visit(course, lom_course_record)
+            self.courses.append(lom_course_record)
+
+    def visit_year(self, value: str, record: LOMMetadata) -> None:
+        """Visit year."""
+        self.year = value
+        record.set_datetime(value)
+
+    def visit_semester(self, value: str, record: LOMMetadata) -> None:
+        """Visit semester."""
+        self.semester = value
+        record.append_keyword(value, language_code="x-none")
 
     def visit_language(self, value: str, record: LOMMetadata) -> None:
         """Visit language."""
@@ -209,41 +193,11 @@ class MoodleFileToLOMFile(Visitor):
             record.append_oefos_id(id_, "en")
 
 
-def convert_course_metadata(
-    moodle_course_metadata: dict,
-    moodle_file_metadata: dict,
-) -> LOMMetadata:
-    """Create metadata of the course.
-
-    it seams not necessary to have the course_metadata explicitly here, but
-    there are multiple courses which course does this file belong to?
-    """
-    metadata = LOMMetadata(overwritable=True)
-
-    visitor = MoodleCourseToLOMCourse()
-    visitor.visit(moodle_course_metadata, moodle_file_metadata, metadata)
-
-    return metadata
-
-
-def convert_unit_metadata(
-    moodle_course_metadata: dict,
-    moodle_file_metadata: dict,
-) -> LOMMetadata:
-    """Create metadata of an unit."""
-    metadata = LOMMetadata(overwritable=True)
-
-    visitor = MoodleUnitToLOMUnit()
-    visitor.visit(moodle_course_metadata, moodle_file_metadata, metadata)
-
-    return metadata
-
-
-def convert_file_metadata(moodle_file_metadata: dict) -> LOMMetadata:
+def convert_moodle_to_lom(moodle_file_metadata: dict) -> LOMMetadata:
     """Convert file metadata."""
     metadata = LOMMetadata(overwritable=True)
 
-    visitor = MoodleFileToLOMFile()
+    visitor = MoodleToLOM()
     visitor.visit(moodle_file_metadata, metadata)
 
     return metadata

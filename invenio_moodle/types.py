@@ -134,23 +134,32 @@ class BaseRecord:
     """Base."""
 
     key: Key
+    pid: str
     metadata: LOMMetadata
 
     @property
-    def pid(self) -> str:
-        """Get pid."""
-        return self.key.get_moodle_pid_value()
+    def json(self) -> dict:
+        """Get json."""
+        return self.metadata.json
 
 
 @dataclass
 class FileRecord(BaseRecord):
     """File."""
 
-    file_url: str
+    @property
+    def url(self) -> str:
+        """Get url."""
+        return self.key.url
+
+    @property
+    def hash_md5(self) -> str:
+        """Get hash_md5."""
+        return self.key.hash_md5
 
 
 @dataclass
 class LinkRecord(BaseRecord):
     """Link."""
 
-    url: str
+    # url: str

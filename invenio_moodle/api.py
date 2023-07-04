@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from marshmallow.exceptions import ValidationError
 from requests import get
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -26,19 +27,23 @@ if TYPE_CHECKING:
     from invenio_records_lom.utils import LOMRecordService
 
 
-def fetch_moodle(moodle_fetch_url: str) -> None:
+def fetch_moodle(
+    moodle_fetch_url: str,
+    record_service: LOMRecordService,
+    identity: Identity,
+) -> None:
     """Fetch data from MOODLE_FETCH_URL and insert it into the database."""
     response = get(moodle_fetch_url, timeout=10)
     response.raise_for_status()
 
     moodle_data = response.json()
 
-    insert_moodle_into_db(moodle_data)
+    insert_moodle_into_db(moodle_data, record_service, identity)
 
 
 def insert_moodle_into_db(
     moodle_data: dict,
-    record_service: LOMRecordService,
+    records_service: LOMRecordService,
     identity: Identity,
 ) -> None:
     """Insert data encoded in `moodle-data` into invenio-database.
@@ -57,11 +62,13 @@ def insert_moodle_into_db(
     moodle_records = extract_moodle_records(moodle_data)
     post_processing(moodle_records)
 
-    records = build_intermediate_records(moodle_records, record_service, identity)
+    records = build_intermediate_records(moodle_records, records_service, identity)
 
-    for record in records:
+    for _, record in records.items():
         try:
-            import_record(record, record_service, identity)
+            print(record)
+            import_record(record, records_service, identity)
+            return
         except NoResultFound:
             # TODO: logging
             continue

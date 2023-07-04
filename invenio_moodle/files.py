@@ -26,7 +26,9 @@ if t.TYPE_CHECKING:
     from .types import FileRecord
 
 
-def save_file_locally(response: Response, idx: int, directory: Path) -> FileCacheInfo:
+def save_file_locally(
+    response: Response, hash_md5: str, directory: Path
+) -> FileCacheInfo:
     """Save file locally."""
     # find filename in headers
     dispos = response.headers.get("content-disposition", "")
@@ -41,8 +43,8 @@ def save_file_locally(response: Response, idx: int, directory: Path) -> FileCach
         raise ValueError(msg)
 
     # save file to `directory`, compute its hash along the way
-    # filepath is of form 'directory/0/file.pdf'
-    filepath = directory.joinpath(str(idx), filename.replace(" ", "_"))
+    # filepath is of form 'directory/hash_md5/file.pdf'
+    filepath = directory.joinpath(hash_md5, filename.replace(" ", "_"))
     hash_ = hashlib.md5()  # noqa: S324
 
     # create 'directory/0/'
@@ -56,7 +58,7 @@ def save_file_locally(response: Response, idx: int, directory: Path) -> FileCach
     return FileCacheInfo(hash_md5=hash_.hexdigest(), path=filepath)
 
 
-def cache_file(url: str) -> FileCacheInfo:
+def cache_file(url: str, hash_md5: str, temp_dir: str) -> FileCacheInfo:
     """Create a file-cache.
 
     It creates a file-cache by downloading unprovided files into
@@ -65,12 +67,11 @@ def cache_file(url: str) -> FileCacheInfo:
     :param Path directory: The directory to download unprovided files into.
     :param list[str] urls: The URLs of the to-be-cached files.
     """
-    with Session() as session, TemporaryDirectory() as temp_dir:
-        directory = Path(temp_dir)
-        with session.get(url, stream=True) as response:
-            response.raise_for_status()
+    directory = Path(temp_dir)
+    with Session() as session, session.get(url, stream=True) as response:
+        response.raise_for_status()
 
-        return save_file_locally(response, directory)
+        return save_file_locally(response, hash_md5, directory)
 
 
 def add_file_to_draft(
@@ -79,16 +80,21 @@ def add_file_to_draft(
     identity: Identity,
 ) -> None:
     """Add file to draft."""
-    file_info = cache_file(record.url)
-    filename = file_info.path.name
-    draft_files.init_files(id_=record.pid, data=[{"key": filename}], identity=identity)
-
-    # ATTENTION: 1024 * 1024 may be a problem?
-    with file_info.path.open(mode="rb", buffering=1024 * 1024) as fp:
-        draft_files.set_file_content(
+    with TemporaryDirectory() as temp_dir:
+        file_info = cache_file(record.url, record.hash_md5, temp_dir)
+        filename = file_info.path.name
+        draft_files.init_files(
             id_=record.pid,
-            file_key=filename,
-            stream=fp,
+            data=[{"key": filename}],
             identity=identity,
         )
-    draft_files.commit_file(id_=record.pid, file_key=filename, identity=identity)
+
+        # ATTENTION: 1024 * 1024 may be a problem?
+        with file_info.path.open(mode="rb", buffering=1024 * 1024) as fp:
+            draft_files.set_file_content(
+                id_=record.pid,
+                file_key=filename,
+                stream=fp,
+                identity=identity,
+            )
+        draft_files.commit_file(id_=record.pid, file_key=filename, identity=identity)

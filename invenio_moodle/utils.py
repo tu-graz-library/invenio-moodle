@@ -15,21 +15,9 @@ from invenio_pidstore.errors import PIDDoesNotExistError
 from invenio_pidstore.models import PersistentIdentifier
 from invenio_records_lom.utils import LOMMetadata
 
-from .convert import (
-    convert_course_metadata,
-    convert_file_metadata,
-    convert_unit_metadata,
-)
+from .convert import convert_moodle_to_lom
 from .files import add_file_to_draft
-from .types import (
-    BaseRecord,
-    CourseKey,
-    CourseRecord,
-    FileKey,
-    FileRecord,
-    UnitKey,
-    UnitRecord,
-)
+from .types import BaseRecord, FileKey, FileRecord, LinkKey, LinkRecord
 
 if TYPE_CHECKING:
     from flask_principal import Identity
@@ -133,10 +121,8 @@ def get_from_database_or_create(
 
     if isinstance(key, FileKey):
         type_of_record = FileRecord
-    elif isinstance(key, UnitKey):
-        type_of_record = UnitRecord
-    elif isinstance(key, CourseKey):
-        type_of_record = CourseRecord
+    elif isinstance(key, LinkKey):
+        type_of_record = LinkRecord
     else:
         type_of_record = BaseRecord
 
@@ -163,52 +149,7 @@ def build_intermediate_records(
     for moodle_file_metadata in moodle_records:
         file_key = FileKey(moodle_file_metadata)
         file_record = get_from_database_or_create(file_key, record_service, identity)
-        file_record.update_metadata(convert_file_metadata(moodle_file_metadata))
-
-        unit_records = []
-        course_records = []
-
-        for moodle_course_metadata in moodle_file_metadata["courses"]:
-            course_key = CourseKey(moodle_course_metadata)
-            if course_key in records:
-                course_record = records[course_key]
-            else:
-                course_record = get_from_database_or_create(
-                    course_key,
-                    record_service,
-                    identity,
-                )
-                lom_course_metadata = convert_course_metadata(
-                    moodle_course_metadata,
-                    moodle_file_metadata,
-                )
-                course_record.update_metadata(lom_course_metadata)
-                course_records.append(course_record)
-
-            unit_key = UnitKey(moodle_file_metadata, moodle_course_metadata)
-            if unit_key in records:
-                unit_record = records[unit_key]
-            else:
-                unit_record = get_from_database_or_create(
-                    unit_key,
-                    record_service,
-                    identity,
-                )
-                lom_unit_metadata = convert_unit_metadata(
-                    moodle_file_metadata,
-                    moodle_course_metadata,
-                )
-                unit_record.update_metadata(lom_unit_metadata)
-                unit_records.append(unit_record)
-
-        for unit_record in unit_records:
-            unit_record.construct_down_links([file_record])
-            unit_record.construct_up_links(course_records)
-
-        for course_record in course_records:
-            course_record.construct_down_links(unit_records)
-
-        file_record.construct__up_links(unit_records)
+        file_record.update_metadata(convert_moodle_to_lom(moodle_file_metadata))
         records[file_key] = file_record
 
     return records

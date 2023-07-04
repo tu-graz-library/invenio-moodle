@@ -50,7 +50,7 @@ def extract_moodle_records(moodle_data: dict) -> list[dict]:
     """Create moodle file jsons."""
     return [
         file_json
-        for moodle_course in moodle_data["moodlecourses"]
+        for _, moodle_course in moodle_data["moodlecourses"].items()
         for file_json in moodle_course["files"]
     ]
 
@@ -58,7 +58,7 @@ def extract_moodle_records(moodle_data: dict) -> list[dict]:
 def create_draft(
     key: Key,
     moodle_pid_value: str,
-    record_service: LOMRecordService,
+    records_service: LOMRecordService,
     identity: Identity,
 ) -> RecordItem:
     """Create draft with empty metadata."""
@@ -70,12 +70,12 @@ def create_draft(
     }
     metadata = LOMMetadata.create(resource_type=key.resource_type, pids=pids_dict)
     metadata.append_identifier(moodle_pid_value, catalog="moodle")
-    return record_service.create(data=metadata.json, identity=identity)
+    return records_service.create(data=metadata.json, identity=identity)
 
 
 def get_from_database_or_create(
     key: Key,
-    record_service: LOMRecordService,
+    records_service: LOMRecordService,
     identity: Identity,
 ) -> BaseRecord:
     """Fetch moodle-result corresponding to `key`, create database-entry if none exists.
@@ -104,9 +104,9 @@ def get_from_database_or_create(
             pid_value=moodle_pid_value,
         )
     except PIDDoesNotExistError:
-        draft = create_draft(key, moodle_pid_value, record_service, identity)
+        draft = create_draft(key, moodle_pid_value, records_service, identity)
         pid: str = draft.id
-        lom_metadata = LOMMetadata(draft.to_dict())
+        lom_metadata = LOMMetadata(draft.to_dict(), overwritable=True)
     else:
         # get lomid corresponding to moodle_pid
         lom_pid = PersistentIdentifier.get_by_object(
@@ -116,8 +116,8 @@ def get_from_database_or_create(
         )
 
         pid: str = lom_pid.pid_value
-        metadata = record_service.edit(id_=pid, identity=identity).to_dict()
-        lom_metadata = LOMMetadata(metadata)
+        metadata = records_service.edit(id_=pid, identity=identity).to_dict()
+        lom_metadata = LOMMetadata(metadata, overwritable=True)
 
     if isinstance(key, FileKey):
         type_of_record = FileRecord
@@ -135,7 +135,7 @@ def get_from_database_or_create(
 
 def build_intermediate_records(
     moodle_records: list[dict],
-    record_service: LOMRecordService,
+    records_service: LOMRecordService,
     identity: Identity,
 ) -> dict[Key, BaseRecord]:
     """Build course tree.
@@ -148,8 +148,8 @@ def build_intermediate_records(
     # previous versions exist
     for moodle_file_metadata in moodle_records:
         file_key = FileKey(moodle_file_metadata)
-        file_record = get_from_database_or_create(file_key, record_service, identity)
-        file_record.update_metadata(convert_moodle_to_lom(moodle_file_metadata))
+        file_record = get_from_database_or_create(file_key, records_service, identity)
+        convert_moodle_to_lom(moodle_file_metadata, file_record.metadata)
         records[file_key] = file_record
 
     return records
@@ -157,19 +157,19 @@ def build_intermediate_records(
 
 def import_record(
     record: BaseRecord,
-    record_service: LOMRecordService,
+    records_service: LOMRecordService,
     identity: Identity,
 ) -> None:
     """Import Record."""
     if isinstance(record, FileRecord):
-        add_file_to_draft(record, record_service, identity)
+        add_file_to_draft(record, records_service.draft_files, identity)
 
-    record_service.update_draft(
+    records_service.update_draft(
         id_=record.pid,
         data=record.json,
         identity=identity,
     )
-    record_service.publish(id_=record.pid, identity=identity)
+    records_service.publish(id_=record.pid, identity=identity)
 
 
 def remove_moodle_only_course(moodle_records: dict) -> None:
@@ -180,7 +180,7 @@ def remove_moodle_only_course(moodle_records: dict) -> None:
     for moodle_file_metadata in moodle_records:
         for idx, moodle_course_metadata in enumerate(moodle_file_metadata["courses"]):
             if is_moodle_only_course(moodle_course_metadata):
-                moodle_file_metadata["course"].pop(idx)
+                moodle_file_metadata["courses"].pop(idx)
 
 
 def post_processing(moodle_records: dict) -> dict:

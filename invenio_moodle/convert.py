@@ -193,11 +193,7 @@ class MoodleToLOM(Visitor):
             record.append_oefos_id(id_, "en")
 
 
-def convert_moodle_to_lom(moodle_file_metadata: dict) -> LOMMetadata:
+def convert_moodle_to_lom(moodle_file_metadata: dict, metadata: LOMMetadata) -> None:
     """Convert file metadata."""
-    metadata = LOMMetadata(overwritable=True)
-
     visitor = MoodleToLOM()
     visitor.visit(moodle_file_metadata, metadata)
-
-    return metadata

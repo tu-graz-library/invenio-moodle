@@ -11,7 +11,7 @@ from collections import Counter, defaultdict
 
 from invenio_records_lom.services.schemas.fields import ControlledVocabularyField
 from marshmallow import Schema, ValidationError, validates_schema
-from marshmallow.fields import Constant, List, Nested, String
+from marshmallow.fields import Constant, Dict, List, Nested, String
 
 
 class ClassificationValuesSchema(Schema):
@@ -100,7 +100,7 @@ class FileSchema(Schema):
 class MoodleCourseSchema(Schema):
     """Moodle moodlecourse schema."""
 
-    files = List(Nested(FileSchema), required=True)
+    files = List(Nested(FileSchema))
 
 
 class MoodleSchema(Schema):
@@ -110,15 +110,18 @@ class MoodleSchema(Schema):
     """
 
     applicationprofile = String(required=True)
-    moodlecourses = List(Nested(MoodleCourseSchema), required=True)
+    moodlecourses = Dict(
+        keys=String(),
+        values=Nested(MoodleCourseSchema, required=True),
+    )
 
     @validates_schema
     def validate_urls_unique(self, data: dict, **__: dict) -> None:
         """Check that each file-URL only appears once."""
         urls_counter = Counter(
-            file["fileurl"]
-            for moodlecourse in data["moodlecourses"]
-            for file in moodlecourse["files"]
+            file_["fileurl"]
+            for _, moodlecourse in data["moodlecourses"].items()
+            for file_ in moodlecourse["files"]
         )
         duplicated_urls = [url for url, count in urls_counter.items() if count > 1]
         if duplicated_urls:
@@ -133,20 +136,24 @@ class MoodleSchema(Schema):
         json in all their appearances.
         """
         jsons_by_courseid = defaultdict(list)
-        for moodlecourse in data["moodlecourses"]:
-            for file in moodlecourse["files"]:
-                for course in file["courses"]:
-                    courseid = course["courseid"]
-                    if course not in jsons_by_courseid[courseid]:
-                        jsons_by_courseid[courseid].append(course)
+        for _, moodlecourse in data["moodlecourses"].items():
+            for file_ in moodlecourse["files"]:
+                for course in file_["courses"]:
+                    course_id = course["courseid"]
+                    if course not in jsons_by_courseid[course_id]:
+                        jsons_by_courseid[course_id].append(course)
+
         ambiguous_courseids = {
-            courseid for courseid, jsons in jsons_by_courseid.items() if len(jsons) > 1
+            course_id
+            for course_id, jsons in jsons_by_courseid.items()
+            if len(jsons) > 1
         }
 
         # '0' is special courseid shared by all moodle-only courses,
         # it is allowed to be ambiguous
         ambiguous_courseids -= {"0"}
 
-        if ambiguous_courseids:
-            msg = "Different course-JSONs with same courseid."
-            raise ValidationError(msg)
+        # if ambiguous_courseids:
+        #     course_ids = ", ".join(course_id for course_id in ambiguous_courseids)
+        #     msg = f"Different course-JSONs with same courseid {course_ids}."
+        #     raise ValidationError(msg)

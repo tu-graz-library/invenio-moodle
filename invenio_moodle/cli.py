@@ -7,21 +7,32 @@
 
 """Command-line interface for `invenio_moodle`."""
 
-import click
+from click import STRING, group, option, secho
 from click_params import URL
 from flask.cli import with_appcontext
+from invenio_config_tugraz import get_identity_from_user_by_email
+from invenio_records_lom.proxies import current_records_lom
+from marshmallow import ValidationError
 
 from .api import fetch_moodle
+from .types import Color
 
 
-@click.group()
+@group()
 def moodle() -> None:
     """invenio-moodle commands."""
 
 
 @moodle.command()
-@click.option("--endpoint", type=URL, required=True)
+@option("--endpoint", type=URL, required=True)
+@option("--user-email", type=STRING, required=True)
 @with_appcontext
-def import_by_endpoint(endpoint: str = None) -> None:
+def import_by_endpoint(endpoint: str, user_email: str) -> None:
     """Fetch data from MOODLE_FETCH_URL and insert it into the database."""
-    fetch_moodle(endpoint)
+    identity = get_identity_from_user_by_email(email=user_email)
+    records_service = current_records_lom.records_service
+
+    try:
+        fetch_moodle(endpoint, records_service, identity)
+    except ValidationError as error:
+        secho(error, fg=Color.error)

@@ -104,7 +104,7 @@ class MoodleToLOM(Visitor):
 
         for course in self.courses:
             course.set_version(version, datetime=self.year)
-            record.append_course(course.json)
+            record.append_course(course)
 
     def visit_courses(self, value: list, _: LOMMetadata) -> None:
         """Visit courses."""
@@ -165,11 +165,14 @@ class MoodleToLOM(Visitor):
         """Visit resourcetype."""
         # https://skohub.io/dini-ag-kim/hcrt/heads/master/w3id.org/kim/hcrt/slide.en.html
         learningresourcetype_by_resourcetype = {
-            "No selection": None,
-            "Presentationslide": "slide",
-            "Exercise": "assessment",
+            "No selection": "other",
+            "noselection": "other",
+            "presentationslide": "slide",
+            "exercise": "assessment",
+            "graphic": "image",
+            "figure": "image",
         }
-        if learningresourcetype := learningresourcetype_by_resourcetype[value]:
+        if learningresourcetype := learningresourcetype_by_resourcetype[value.lower()]:
             record.append_learningresourcetype(learningresourcetype)
 
     def visit_license(self, value: str, record: LOMMetadata) -> None:

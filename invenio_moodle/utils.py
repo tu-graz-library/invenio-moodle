@@ -17,7 +17,7 @@ from invenio_records_lom.utils import LOMMetadata
 
 from .convert import convert_moodle_to_lom
 from .files import add_file_to_draft
-from .types import BaseRecord, FileKey, FileRecord, LinkKey, LinkRecord
+from .types import BaseRecord, FileKey, FileRecord, LinkKey, LinkRecord, Status
 
 if TYPE_CHECKING:
     from flask_principal import Identity
@@ -107,6 +107,7 @@ def get_from_database_or_create(
         draft = create_draft(key, moodle_pid_value, records_service, identity)
         pid: str = draft.id
         lom_metadata = LOMMetadata(draft.to_dict(), overwritable=True)
+        status = Status.NEW
     else:
         # get lomid corresponding to moodle_pid
         lom_pid = PersistentIdentifier.get_by_object(
@@ -118,6 +119,7 @@ def get_from_database_or_create(
         pid: str = lom_pid.pid_value
         metadata = records_service.edit(id_=pid, identity=identity).to_dict()
         lom_metadata = LOMMetadata(metadata, overwritable=True)
+        status = Status.EDIT
 
     if isinstance(key, FileKey):
         type_of_record = FileRecord
@@ -126,11 +128,7 @@ def get_from_database_or_create(
     else:
         type_of_record = BaseRecord
 
-    return type_of_record(
-        key=key,
-        pid=pid,
-        metadata=lom_metadata,
-    )
+    return type_of_record(key, pid, lom_metadata, status)
 
 
 def build_intermediate_records(
@@ -161,7 +159,7 @@ def import_record(
     identity: Identity,
 ) -> None:
     """Import Record."""
-    if isinstance(record, FileRecord):
+    if isinstance(record, FileRecord) and record.status == Status.NEW:
         add_file_to_draft(record, records_service.draft_files, identity)
 
     records_service.update_draft(

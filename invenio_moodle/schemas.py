@@ -125,7 +125,7 @@ class MoodleSchema(Schema):
         )
         duplicated_urls = [url for url, count in urls_counter.items() if count > 1]
         if duplicated_urls:
-            msg = "Different file-JSONs with same URL."
+            msg = f"Different file-JSONs with same URL {duplicated_urls}."
             raise ValidationError(msg)
 
     @validates_schema

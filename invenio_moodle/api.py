@@ -33,7 +33,7 @@ def fetch_moodle(
     identity: Identity,
 ) -> None:
     """Fetch data from MOODLE_FETCH_URL and insert it into the database."""
-    response = get(moodle_fetch_url, timeout=10)
+    response = get(moodle_fetch_url, timeout=15)
     response.raise_for_status()
 
     moodle_data = response.json()
@@ -66,9 +66,7 @@ def insert_moodle_into_db(
 
     for _, record in records.items():
         try:
-            print(record)
             import_record(record, records_service, identity)
-            return
         except NoResultFound:
             # TODO: logging
             continue

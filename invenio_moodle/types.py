@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from enum import Enum, auto, unique
 from functools import singledispatchmethod
 from typing import TYPE_CHECKING
 
@@ -129,6 +130,14 @@ class LinkKey(Key):
         return self.url
 
 
+@unique
+class Status(Enum):
+    """Status."""
+
+    NEW = auto()
+    EDIT = auto()
+
+
 @dataclass
 class BaseRecord:
     """Base."""
@@ -136,6 +145,7 @@ class BaseRecord:
     key: Key
     pid: str
     metadata: LOMMetadata
+    status: Status
 
     @property
     def json(self) -> dict:

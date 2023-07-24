@@ -27,7 +27,9 @@ if t.TYPE_CHECKING:
 
 
 def save_file_locally(
-    response: Response, hash_md5: str, directory: Path
+    response: Response,
+    hash_md5: str,
+    directory: Path,
 ) -> FileCacheInfo:
     """Save file locally."""
     # find filename in headers
@@ -36,7 +38,7 @@ def save_file_locally(
     # all html-headers are encoded in latin1, but python interprets as utf-8
     dispos = dispos.encode("latin1").decode("utf-8")
 
-    if match := re.search('filename="([^"]*)"', dispos):
+    if match := re.search('filename="?([^"]*)"?', dispos):
         filename = match.group(1)
     else:
         msg = f"couldn't find filename in header {dispos}"

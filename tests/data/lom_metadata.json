@@ -23,6 +23,33 @@
         }
       }
     },
+    "educational": {
+      "learningresourcetype": [
+        {
+          "source": {
+            "langstring": {
+              "#text": "https://w3id.org/kim/hcrt/scheme",
+              "lang": "x-none"
+            }
+          },
+          "id": "https://w3id.org/kim/hcrt/other",
+          "entry": [
+            {
+              "langstring": {
+                "#text": "Sonstiges",
+                "lang": "de"
+              }
+            },
+            {
+              "langstring": {
+                "#text": "Other",
+                "lang": "en"
+              }
+            }
+          ]
+        }
+      ]
+    },
     "general": {
       "language": [
         "de"
@@ -288,102 +315,6 @@
           ],
           "language": [
             "de"
-          ],
-          "version": {
-            "langstring": {
-              "#text": "SS 2023",
-              "lang": "x-none"
-            },
-            "datetime": "2023"
-          }
-        }
-      },
-      {
-        "course": {
-          "identifier": [
-            {
-              "catalog": "teachcenter-course-id",
-              "entry": {
-                "langstring": {
-                  "#text": "moodlecourse-475",
-                  "lang": "x-none"
-                }
-              }
-            },
-            {
-              "catalog": "tugrazonline-id",
-              "entry": {
-                "langstring": {
-                  "#text": "0",
-                  "lang": "x-none"
-                }
-              }
-            }
-          ],
-          "title": {
-            "langstring": {
-              "#text": "[INR02412UF] AK  Technology Enhanced Learning (SS)",
-              "lang": "x-none"
-            }
-          },
-          "keyword": [
-            {
-              "langstring": {
-                "#text": "",
-                "lang": "x-none"
-              }
-            }
-          ],
-          "description": [
-            {
-              "langstring": {
-                "#text": "",
-                "lang": "x-none"
-              }
-            }
-          ],
-          "contribute": [
-            {
-              "role": {
-                "source": {
-                  "langstring": {
-                    "#text": "LOMv1.0",
-                    "lang": "x-none"
-                  }
-                },
-                "value": {
-                  "langstring": {
-                    "#text": "Unknown",
-                    "lang": "x-none"
-                  }
-                }
-              },
-              "entity": [
-                ""
-              ]
-            },
-            {
-              "role": {
-                "source": {
-                  "langstring": {
-                    "#text": "LOMv1.0",
-                    "lang": "x-none"
-                  }
-                },
-                "value": {
-                  "langstring": {
-                    "#text": "Author",
-                    "lang": "x-none"
-                  }
-                }
-              },
-              "entity": [
-                "Martin Ebner"
-              ]
-            }
-          ],
-          "language": [
-            ""
           ],
           "version": {
             "langstring": {

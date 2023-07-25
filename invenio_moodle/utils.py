@@ -27,9 +27,9 @@ if TYPE_CHECKING:
     from .types import Key
 
 
-def is_moodle_only_course(moodle_course_metadata: dict) -> bool:
+def is_not_moodle_only_course(moodle_course_metadata: dict) -> bool:
     """Check if it is a moodle only course."""
-    return moodle_course_metadata["courseid"] == "0"
+    return moodle_course_metadata["courseid"] != "0"
 
 
 def is_course_root(sourceid: str) -> bool:
@@ -167,9 +167,10 @@ def remove_moodle_only_course(moodle_records: dict) -> None:
     This is indicated by the courseid == 0
     """
     for moodle_file_metadata in moodle_records:
-        for idx, moodle_course_metadata in enumerate(moodle_file_metadata["courses"]):
-            if is_moodle_only_course(moodle_course_metadata):
-                moodle_file_metadata["courses"].pop(idx)
+        not_moodle_only_courses = list(
+            filter(is_not_moodle_only_course, moodle_file_metadata["courses"]),
+        )
+        moodle_file_metadata["courses"] = not_moodle_only_courses
 
 
 def post_processing(moodle_records: dict) -> dict:

@@ -171,5 +171,3 @@ class FileRecord(BaseRecord):
 @dataclass
 class LinkRecord(BaseRecord):
     """Link."""
-
-    # url: str

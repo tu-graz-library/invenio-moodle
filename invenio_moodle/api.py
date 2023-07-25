@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from marshmallow.exceptions import ValidationError
 from requests import get
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -64,9 +63,8 @@ def insert_moodle_into_db(
 
     records = build_intermediate_records(moodle_records, records_service, identity)
 
-    for _, record in records.items():
+    for record in records.values():
         try:
             import_record(record, records_service, identity)
-        except NoResultFound:
-            # TODO: logging
+        except NoResultFound:  # noqa: PERF203
             continue

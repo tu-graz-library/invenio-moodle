@@ -136,7 +136,7 @@ class MoodleSchema(Schema):
         json in all their appearances.
         """
         jsons_by_courseid = defaultdict(list)
-        for _, moodlecourse in data["moodlecourses"].items():
+        for moodlecourse in data["moodlecourses"].values():
             for file_ in moodlecourse["files"]:
                 for course in file_["courses"]:
                     course_id = course["courseid"]
@@ -153,7 +153,7 @@ class MoodleSchema(Schema):
         # it is allowed to be ambiguous
         ambiguous_courseids -= {"0"}
 
-        # if ambiguous_courseids:
-        #     course_ids = ", ".join(course_id for course_id in ambiguous_courseids)
-        #     msg = f"Different course-JSONs with same courseid {course_ids}."
-        #     raise ValidationError(msg)
+        if ambiguous_courseids:
+            course_ids = ", ".join(course_id for course_id in ambiguous_courseids)
+            msg = f"Different course-JSONs with same courseid {course_ids}."
+            raise ValidationError(msg)

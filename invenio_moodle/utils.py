@@ -37,15 +37,6 @@ def is_course_root(sourceid: str) -> bool:
     return sourceid == "-1"
 
 
-def is_valid_to_import_record(records: list[LOMMetadata], record: LOMMetadata) -> bool:
-    """Check against if the record is a unique new record.
-
-    The record could exist in records already
-    The record could exist in database already
-    """
-    # TODO: implement
-
-
 def extract_moodle_records(moodle_data: dict) -> list[dict]:
     """Create moodle file jsons."""
     return [
@@ -188,6 +179,3 @@ def post_processing(moodle_records: dict) -> dict:
         - remove course with courseid == 0
     """
     remove_moodle_only_course(moodle_records)
-
-    # TODO: add further functions to remove all records which should not be imported
-    # into database

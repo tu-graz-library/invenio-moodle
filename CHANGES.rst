@@ -8,6 +8,11 @@
 Changes
 =======
 
+Version v0.2.2 (release 2023-07-25)
+
+- setup: fix typo, prevent correct build
+
+
 Version v0.2.1 (release 2023-07-25)
 
 - setup: change to reusable workflows

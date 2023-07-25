@@ -7,3 +7,8 @@
 
 Changes
 =======
+
+Version v0.2.0 (release 2023-07-25)
+
+
+

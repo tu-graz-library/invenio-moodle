@@ -165,7 +165,7 @@ class MoodleToLOM(Visitor):
         """Visit resourcetype."""
         # https://skohub.io/dini-ag-kim/hcrt/heads/master/w3id.org/kim/hcrt/slide.en.html
         learningresourcetype_by_resourcetype = {
-            "No selection": "other",
+            "no selection": "other",
             "noselection": "other",
             "presentationslide": "slide",
             "exercise": "assessment",

@@ -8,6 +8,11 @@
 Changes
 =======
 
+Version v0.2.3 (release 2023-11-10)
+
+- global: migrate to invenio-i18n
+
+
 Version v0.2.2 (release 2023-07-25)
 
 - setup: fix typo, prevent correct build

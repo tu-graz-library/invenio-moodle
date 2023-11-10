@@ -17,6 +17,7 @@ from pathlib import Path
 
 import pytest
 from flask import Flask
+from invenio_i18n import InvenioI18N
 
 from invenio_moodle import InvenioMoodle
 
@@ -28,6 +29,7 @@ def create_app(instance_path: str) -> Callable:
     def factory(**config: dict) -> Flask:
         app = Flask("testapp", instance_path=instance_path)
         app.config.update(**config)
+        InvenioI18N(app)
         InvenioMoodle(app)
         return app
 

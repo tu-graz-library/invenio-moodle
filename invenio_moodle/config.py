@@ -7,7 +7,7 @@
 
 """Default configuration for invenio-moodle."""
 
-from flask_babelex import gettext as _
+from invenio_i18n import gettext as _
 from invenio_rdm_records.services.pids.providers import ExternalPIDProvider
 
 MOODLE_CELERY_BEAT_SCHEDULE = {}

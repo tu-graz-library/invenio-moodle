@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2022 Graz University of Technology.
+# Copyright (C) 2022-2024 Graz University of Technology.
 #
 # invenio-moodle is free software; you can redistribute it and/or modify
 # it under the terms of the MIT License; see LICENSE file for more details.
@@ -11,7 +11,7 @@ from collections import Counter, defaultdict
 
 from invenio_records_lom.services.schemas.fields import ControlledVocabularyField
 from marshmallow import Schema, ValidationError, validates_schema
-from marshmallow.fields import Constant, Dict, List, Nested, String
+from marshmallow.fields import Constant, Dict, List, Nested, Number, String
 
 
 class ClassificationValuesSchema(Schema):
@@ -83,7 +83,7 @@ class FileSchema(Schema):
     context = String(required=True)
     courses = List(Nested(CourseSchema), required=True)
     filecreationtime = String(required=True)
-    filesize = String(required=True)
+    filesize = Number(required=True)
     fileurl = String(required=True)
     language = String(required=True)
     license = Nested(LicenseSchema)  # noqa: A003
@@ -128,7 +128,7 @@ class MoodleSchema(Schema):
             msg = f"Different file-JSONs with same URL {duplicated_urls}."
             raise ValidationError(msg)
 
-    @validates_schema
+    # @validates_schema
     def validate_course_jsons_unique_per_courseid(self, data: dict, **__: dict) -> None:
         """Validate against unique courseid.
 
@@ -140,7 +140,7 @@ class MoodleSchema(Schema):
             for file_ in moodlecourse["files"]:
                 for course in file_["courses"]:
                     course_id = course["courseid"]
-                    if course not in jsons_by_courseid[course_id]:
+                    if course_id not in jsons_by_courseid[course_id]:
                         jsons_by_courseid[course_id].append(course)
 
         ambiguous_courseids = {

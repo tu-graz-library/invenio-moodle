@@ -1,29 +1,22 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2022-2023 Graz University of Technology.
+# Copyright (C) 2022-2024 Graz University of Technology.
 #
 # invenio-moodle is free software; you can redistribute it and/or modify
 # it under the terms of the MIT License; see LICENSE file for more details.
 
 """Provide functions to store files into the database."""
 
-from __future__ import annotations
-
 import hashlib
 import re
-import typing as t
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from flask_principal import Identity
+from invenio_records_resources.services import FileService
 from requests import Response, Session
 
-from .types import FileCacheInfo
-
-if t.TYPE_CHECKING:
-    from flask_principal import Identity
-    from invenio_records_resources.services import FileService
-
-    from .types import FileRecord
+from .types import FileCacheInfo, FileRecord
 
 
 def save_file_locally(

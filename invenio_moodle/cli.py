@@ -23,7 +23,7 @@ def moodle() -> None:
     """invenio-moodle commands."""
 
 
-@moodle.command()
+@moodle.command("import")
 @option("--endpoint", type=URL, required=True)
 @option("--user-email", type=STRING, required=True)
 @option("--dry-run", is_flag=True, default=False)

@@ -11,6 +11,7 @@ from click import STRING, group, option, secho
 from click_params import URL
 from flask import current_app
 from flask.cli import with_appcontext
+from invenio_access import any_user
 from invenio_access.utils import get_identity
 from invenio_accounts import current_accounts
 
@@ -38,8 +39,13 @@ def import_by_endpoint(
     """Fetch data from MOODLE_FETCH_URL and insert it into the database."""
     import_func = current_app.config.get("MOODLE_REPOSITORY_IMPORT_FUNC")
 
-    user = current_accounts.datastore.get_user_by_email(user_email)
-    identity = get_identity(user)
+    try:
+        user = current_accounts.datastore.get_user_by_email(user_email)
+        identity = get_identity(user)
+        identity.provides.add(any_user)
+    except AttributeError:
+        secho("The given user has not been found in the database", fg="red")
+        return
 
     try:
         records = moodle_service.fetch_records(identity)

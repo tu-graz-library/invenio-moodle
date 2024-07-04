@@ -14,7 +14,7 @@ from flask_principal import Identity
 from marshmallow import ValidationError
 
 from .records import MoodleAPI, MoodleRESTConfig
-from .schemas import MoodleSchema
+from .schemas import MoodleSchemaApplicationProfile1, MoodleSchemaApplicationProfile2
 from .types import FileCacheInfo
 from .utils import extract_moodle_records, post_processing
 
@@ -47,9 +47,12 @@ class MoodleRESTService:
         moodle_data = self.api.fetch_records()
 
         try:
-            MoodleSchema().load(moodle_data)
-        except ValidationError as error:
-            raise RuntimeError(str(error)) from error
+            MoodleSchemaApplicationProfile1().load(moodle_data)
+        except ValidationError:
+            try:
+                MoodleSchemaApplicationProfile2().load(moodle_data)
+            except ValidationError as error:
+                raise RuntimeError(str(error)) from error
 
         moodle_records = extract_moodle_records(moodle_data)
         post_processing(moodle_records)

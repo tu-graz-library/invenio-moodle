@@ -8,6 +8,15 @@
 Changes
 =======
 
+Version v1.0.0 (release 2024-07-04)
+
+- global: clean up missed steps from restructering
+- schema: make the schema compatible with 2.0
+- cli: change needed for global-search
+- cli: simplify command
+- refactor: record/service and connector structure
+
+
 Version v0.2.3 (release 2023-11-10)
 
 - global: migrate to invenio-i18n

@@ -13,6 +13,8 @@ from invenio_records_lom.services.schemas.fields import ControlledVocabularyFiel
 from marshmallow import Schema, ValidationError, validates_schema
 from marshmallow.fields import Constant, Dict, List, Nested, Number, String
 
+from .utils import extract_moodle_records
+
 
 class ClassificationValuesSchema(Schema):
     """Moodle classification-values schema."""
@@ -79,12 +81,14 @@ class FileSchema(Schema):
 
     abstract = String(required=True)
     classification = List(Nested(ClassificationSchema), required=True)
-    contenthash = String(required=True)
+    contenthash = String()  # application profile 1.0
+    identifier = String()  # application profile 2.0
     context = String(required=True)
     courses = List(Nested(CourseSchema), required=True)
     filecreationtime = String(required=True)
     filesize = Number(required=True)
-    fileurl = String(required=True)
+    fileurl = String()  # application profile 1.0
+    source = String()  # application profile 2.0
     language = String(required=True)
     license = Nested(LicenseSchema)  # noqa: A003
     mimetype = String(required=True)
@@ -101,6 +105,7 @@ class MoodleCourseSchema(Schema):
     """Moodle moodlecourse schema."""
 
     files = List(Nested(FileSchema))
+    elements = List(Nested(FileSchema))
 
 
 class MoodleSchema(Schema):
@@ -109,19 +114,12 @@ class MoodleSchema(Schema):
     Data coming from moodle should be in this format.
     """
 
-    applicationprofile = String(required=True)
-    moodlecourses = Dict(
-        keys=String(),
-        values=Nested(MoodleCourseSchema, required=True),
-    )
-
     @validates_schema
     def validate_urls_unique(self, data: dict, **__: dict) -> None:
         """Check that each file-URL only appears once."""
         urls_counter = Counter(
-            file_["fileurl"]
-            for _, moodlecourse in data["moodlecourses"].items()
-            for file_ in moodlecourse["files"]
+            file_["fileurl"] if "fileurl" in file_ else file_["source"]
+            for file_ in extract_moodle_records(data)
         )
         duplicated_urls = [url for url, count in urls_counter.items() if count > 1]
         if duplicated_urls:
@@ -157,3 +155,21 @@ class MoodleSchema(Schema):
             course_ids = ", ".join(course_id for course_id in ambiguous_courseids)
             msg = f"Different course-JSONs with same courseid {course_ids}."
             raise ValidationError(msg)
+
+
+class MoodleSchemaApplicationProfile1(MoodleSchema):
+    """Moodle Schema for application profile 1.0."""
+
+    applicationprofile = String(required=True)
+    moodlecourses = Dict(
+        keys=String(),
+        values=Nested(MoodleCourseSchema, required=True),
+    )
+
+
+class MoodleSchemaApplicationProfile2(MoodleSchema):
+    """Moodle schema for application profile 2.0."""
+
+    applicationprofile = String(required=True)
+    release = Number()
+    elements = List(Nested(FileSchema))

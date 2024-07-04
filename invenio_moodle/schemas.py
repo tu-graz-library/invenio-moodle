@@ -8,12 +8,40 @@
 """Schemas for validating input from moodle."""
 
 from collections import Counter, defaultdict
+from types import MappingProxyType
 
-from invenio_records_lom.services.schemas.fields import ControlledVocabularyField
 from marshmallow import Schema, ValidationError, validates_schema
 from marshmallow.fields import Constant, Dict, List, Nested, Number, String
 
 from .utils import extract_moodle_records
+
+
+class ControlledVocabularyField(String):
+    """A controlled vocabulary field."""
+
+    default_error_messages = MappingProxyType(
+        {
+            "not_in_vocabulary": "Value {string!r} not in controlled vocabulary {vocabulary!r}.",
+        },
+    )
+
+    def __init__(self, *, vocabulary: list | None = None, **kwargs: dict) -> None:
+        """Initialize self."""
+        self.vocabulary = vocabulary
+        super().__init__(**kwargs)
+
+    def _deserialize(
+        self,
+        value: str | None,
+        attr: str | None,
+        data: dict | None,
+        **kwargs: dict,
+    ) -> str:
+        string = super()._deserialize(value, attr, data, **kwargs)
+        if string not in self.vocabulary:
+            msg = "not_in_vocabulary"
+            raise self.make_error(msg, vocabulary=self.vocabulary, string=string)
+        return string
 
 
 class ClassificationValuesSchema(Schema):
@@ -26,7 +54,7 @@ class ClassificationValuesSchema(Schema):
 class ClassificationSchema(Schema):
     """Moodle classification schema."""
 
-    type = Constant("oefos", required=True)  # noqa: A003
+    type = Constant("oefos", required=True)
     url = Constant(
         "https://www.data.gv.at/katalog/dataset/stat_ofos-2012",
         required=True,
@@ -90,7 +118,7 @@ class FileSchema(Schema):
     fileurl = String()  # application profile 1.0
     source = String()  # application profile 2.0
     language = String(required=True)
-    license = Nested(LicenseSchema)  # noqa: A003
+    license = Nested(LicenseSchema)
     mimetype = String(required=True)
     persons = List(Nested(PersonSchema), required=True)
     resourcetype = String(required=True)

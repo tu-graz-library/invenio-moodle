@@ -19,28 +19,31 @@ def is_course_root(sourceid: str) -> bool:
 
 
 def extract_moodle_records(moodle_data: dict) -> list[dict]:
-    """Create moodle file jsons."""
+    """Create moodle file jsons.
 
+    application profile 2.0
+    {
+      "elements": [
+        {METADATA goes here}
+      ]
+    }
+
+    application profile 1.0
+    {
+      "moodlecourses":{
+        "1": {
+           "files OR elements":[
+             {METADATA goes here}
+         ]
+    }
+    """
     # application profile 2.0 uses elements and a flat structure to serve the metadata.
-    # {
-    #   "elements": [
-    #     {METADATA goes here}
-    #   ]
-    # }
-
     if "elements" in moodle_data:
         return moodle_data["elements"]
 
     # application profile 1.0 uses a nested structure with
-    # {
-    #   "moodlecourses":{
-    #     "1": {
-    #        "files OR elements":[
-    #          {METADATA goes here}
-    #      ]
-    # }
     elements = []
-    for _, moodle_course in moodle_data["moodlecourses"].items():
+    for moodle_course in moodle_data["moodlecourses"].values():
         if "files" in moodle_course:
             elements.extend(file_json for file_json in moodle_course["files"])
         if "elements" in moodle_course:

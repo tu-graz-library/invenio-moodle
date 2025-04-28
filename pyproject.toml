@@ -8,7 +8,6 @@ exclude = ["docs"]
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = [
-  "ANN101", "ANN102",
   "D203", "D211", "D212", "D213",
   "E501",
   "FA102",
@@ -18,4 +17,11 @@ ignore = [
   "S101",
   "SIM117",
   "UP009",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**.py" = [
+  "ARG001",
+  "FBT001",
+  "SLF001",
 ]

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2022-2024 Graz University of Technology.
+# Copyright (C) 2022-2025 Graz University of Technology.
 #
 # invenio-moodle is free software; you can redistribute it and/or modify
 # it under the terms of the MIT License; see LICENSE file for more details.
@@ -16,16 +16,20 @@ from .proxies import current_moodle
 
 
 @shared_task(ignore_result=True)
-def try_fetch_moodle_except_mail() -> None:
+def import_records() -> None:
     """Fetch data from moodle and enter it into database."""
-    import_func = current_app.config["MOODLE_IMPORT_FUNC"]
+    import_func = current_app.config["MOODLE_REPOSITORY_IMPORT_FUNC"]
     moodle_service = current_moodle.moodle_rest_service
 
-    records = moodle_service.fetch_records(system_identity)
+    current_app.logger.info("Start importing records from moodle.")
 
-    for record in records:
+    moodle_records = moodle_service.fetch_records(system_identity)
+
+    for moodle_record in moodle_records:
         try:
-            import_func(system_identity, record, moodle_service)
+            record = import_func(system_identity, moodle_record, moodle_service)
+            msg = "Moodle record: %s imported successfully."
+            current_app.logger.info(msg, str(record.pid))
         except RuntimeError as error:
-            msg = "ERROR moodle import error: %s"
+            msg = "Moodle import error: %s."
             current_app.logger.error(msg, str(error))

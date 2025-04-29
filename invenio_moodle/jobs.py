@@ -10,7 +10,7 @@
 
 from invenio_jobs.jobs import JobType
 
-from .tasks import try_fetch_moodle_except_mail
+from .tasks import import_records
 
 
 class ImportMoodleRecordsJob(JobType):
@@ -20,4 +20,4 @@ class ImportMoodleRecordsJob(JobType):
     title = "Import Moodle Records"
     description = "Import moodle records."
 
-    task = try_fetch_moodle_except_mail
+    task = import_records

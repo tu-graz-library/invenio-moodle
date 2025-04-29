@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2022-2024 Graz University of Technology.
+# Copyright (C) 2022-2025 Graz University of Technology.
 #
 # invenio-moodle is free software; you can redistribute it and/or modify
 # it under the terms of the MIT License; see LICENSE file for more details.
@@ -11,7 +11,7 @@ from collections import Counter, defaultdict
 from types import MappingProxyType
 
 from marshmallow import Schema, ValidationError, validates_schema
-from marshmallow.fields import Constant, Dict, List, Nested, Number, String
+from marshmallow.fields import Constant, Dict, Integer, List, Nested, String
 
 from .utils import extract_moodle_records
 
@@ -114,7 +114,7 @@ class FileSchema(Schema):
     context = String(required=True)
     courses = List(Nested(CourseSchema), required=True)
     filecreationtime = String(required=True)
-    filesize = Number(required=True)
+    filesize = Integer(required=True)
     fileurl = String()  # application profile 1.0
     source = String()  # application profile 2.0
     language = String(required=True)
@@ -199,5 +199,5 @@ class MoodleSchemaApplicationProfile2(MoodleSchema):
     """Moodle schema for application profile 2.0."""
 
     applicationprofile = String(required=True)
-    release = Number()
+    release = String()
     elements = List(Nested(FileSchema))

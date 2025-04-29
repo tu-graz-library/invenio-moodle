@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2022-2025 Graz University of Technology.
+# Copyright (C) 2022-2023 Graz University of Technology.
 #
 # invenio-moodle is free software; you can redistribute it and/or modify
 # it under the terms of the MIT License; see LICENSE file for more details.
@@ -16,14 +16,24 @@ from json import load
 from pathlib import Path
 
 import pytest
-from _pytest.fixtures import FixtureFunctionMarker
-from invenio_app.factory import create_api as _create_api
+from flask import Flask
+from invenio_i18n import InvenioI18N
+
+from invenio_moodle import InvenioMoodle
 
 
 @pytest.fixture(scope="module")
-def create_app(instance_path: FixtureFunctionMarker) -> Callable:
+def create_app(instance_path: str) -> Callable:
     """Application factory fixture."""
-    return _create_api
+
+    def factory(**config: dict) -> Flask:
+        app = Flask("testapp", instance_path=instance_path)
+        app.config.update(**config)
+        InvenioI18N(app)
+        InvenioMoodle(app)
+        return app
+
+    return factory
 
 
 @pytest.fixture(scope="module")
@@ -36,7 +46,7 @@ def minimal_record() -> dict:
         return load(fp)
 
 
-@pytest.fixture
+@pytest.fixture()
 def expected_lom_metadata() -> None:
     """Expectd unit."""
     filename = Path("data/lom_metadata.json")

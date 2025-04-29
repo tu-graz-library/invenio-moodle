@@ -8,6 +8,15 @@
 Changes
 =======
 
+Version v1.1.0 (release 2025-04-29)
+
+- tasks: improve wording
+- fix: DeprecationWarning
+- chore: maintenance
+- setup: add python3.13 support
+- global: add jobs
+
+
 Version v1.0.0 (release 2024-07-04)
 
 - global: clean up missed steps from restructering

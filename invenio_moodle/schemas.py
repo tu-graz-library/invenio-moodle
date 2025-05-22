@@ -104,7 +104,7 @@ class PersonSchema(Schema):
     role = String(required=True)
 
 
-class FileSchema(Schema):
+class ElementSchema(Schema):
     """Moodle file schema."""
 
     abstract = String(required=True)
@@ -113,13 +113,13 @@ class FileSchema(Schema):
     identifier = String()  # application profile 2.0
     context = String(required=True)
     courses = List(Nested(CourseSchema), required=True)
-    filecreationtime = String(required=True)
-    filesize = Integer(required=True)
+    filecreationtime = String()
+    filesize = Integer()
     fileurl = String()  # application profile 1.0
     source = String()  # application profile 2.0
     language = String(required=True)
     license = Nested(LicenseSchema)
-    mimetype = String(required=True)
+    mimetype = String()
     persons = List(Nested(PersonSchema), required=True)
     resourcetype = String(required=True)
     semester = ControlledVocabularyField(vocabulary=["SS", "WS"], required=True)
@@ -127,13 +127,13 @@ class FileSchema(Schema):
     timereleased = String(required=True)
     title = String(required=True)
     year = String(required=True)
+    duration = String()
 
 
 class MoodleCourseSchema(Schema):
     """Moodle moodlecourse schema."""
 
-    files = List(Nested(FileSchema))
-    elements = List(Nested(FileSchema))
+    elements = List(Nested(ElementSchema))
 
 
 class MoodleSchema(Schema):
@@ -199,5 +199,4 @@ class MoodleSchemaApplicationProfile2(MoodleSchema):
     """Moodle schema for application profile 2.0."""
 
     applicationprofile = String(required=True)
-    release = String()
-    elements = List(Nested(FileSchema))
+    moodlecourses = List(Nested(MoodleCourseSchema))

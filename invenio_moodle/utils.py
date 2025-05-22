@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2022-2024 Graz University of Technology.
+# Copyright (C) 2022-2025 Graz University of Technology.
 #
 # invenio-moodle is free software; you can redistribute it and/or modify
 # it under the terms of the MIT License; see LICENSE file for more details.
@@ -43,7 +43,7 @@ def extract_moodle_records(moodle_data: dict) -> list[dict]:
 
     # application profile 1.0 uses a nested structure with
     elements = []
-    for moodle_course in moodle_data["moodlecourses"].values():
+    for moodle_course in moodle_data["moodlecourses"]:
         if "files" in moodle_course:
             elements.extend(file_json for file_json in moodle_course["files"])
         if "elements" in moodle_course:

@@ -8,6 +8,11 @@
 Changes
 =======
 
+Version v1.1.1 (release 2025-05-22)
+
+- fix(wip): application profile 2
+
+
 Version v1.1.0 (release 2025-04-29)
 
 - tasks: improve wording

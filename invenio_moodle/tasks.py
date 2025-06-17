@@ -29,7 +29,7 @@ def import_records() -> None:
         try:
             record = import_func(system_identity, moodle_record, moodle_service)
             msg = "Moodle record: %s imported successfully."
-            current_app.logger.info(msg, str(record.pid))
+            current_app.logger.info(msg, str(record.id))
         except RuntimeError as error:
             msg = "Moodle import error: %s."
             current_app.logger.error(msg, str(error))

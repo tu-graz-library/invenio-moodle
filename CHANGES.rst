@@ -8,6 +8,11 @@
 Changes
 =======
 
+Version v1.1.2 (release 2025-06-18)
+
+- fix(tasks): wrong variable name
+
+
 Version v1.1.1 (release 2025-05-22)
 
 - fix(wip): application profile 2

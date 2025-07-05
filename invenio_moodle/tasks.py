@@ -16,7 +16,7 @@ from .proxies import current_moodle
 
 
 @shared_task(ignore_result=True)
-def import_records() -> None:
+def import_records(*, dry_run: bool = False) -> None:
     """Fetch data from moodle and enter it into database."""
     import_func = current_app.config["MOODLE_REPOSITORY_IMPORT_FUNC"]
     moodle_service = current_moodle.moodle_rest_service
@@ -27,7 +27,12 @@ def import_records() -> None:
 
     for moodle_record in moodle_records:
         try:
-            record = import_func(system_identity, moodle_record, moodle_service)
+            record = import_func(
+                system_identity,
+                moodle_record,
+                moodle_service,
+                dry_run=dry_run,
+            )
             msg = "Moodle record: %s imported successfully."
             current_app.logger.info(msg, str(record.id))
         except RuntimeError as error:

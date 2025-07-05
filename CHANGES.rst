@@ -8,6 +8,11 @@
 Changes
 =======
 
+Version v1.1.3 (release 2025-07-05)
+
+- job: add dry run option
+
+
 Version v1.1.2 (release 2025-06-18)
 
 - fix(tasks): wrong variable name

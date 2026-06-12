@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2022 Graz University of Technology.
+    Copyright (C) 2022-2026 Graz University of Technology.
 
     invenio-moodle is free software; you can redistribute it and/or
     modify it under the terms of the MIT License; see LICENSE file for more
@@ -7,6 +7,10 @@
 
 Changes
 =======
+
+Version v1.1.4 (released 2026-06-12)
+
+- fix(jobs): specify job_arg_schema
 
 Version v1.1.3 (release 2025-07-05)
 
